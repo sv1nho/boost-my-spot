@@ -1,0 +1,205 @@
+name: Maintenance
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-fuzzing:
+    name: Hostile input against the forms
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: boost_my_spot
+          POSTGRES_PASSWORD: boost_my_spot
+          POSTGRES_DB: boost_my_spot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://boost_my_spot:boost_my_spot@127.0.0.1:5432/boost_my_spot
+      WEB_ORIGIN: http://127.0.0.1:3101
+      BETTER_AUTH_URL: http://127.0.0.1:3101
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-for-any-session
+      FUZZ_UI: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Throw generated text at every form
+        run: npm run e2e
+
+  fuzzing:
+    name: Hostile input against the api
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: boost_my_spot
+          POSTGRES_PASSWORD: boost_my_spot
+          POSTGRES_DB: boost_my_spot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://boost_my_spot:boost_my_spot@127.0.0.1:5432/boost_my_spot
+      WEB_ORIGIN: http://localhost:5173
+      BETTER_AUTH_URL: http://localhost:5173
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-for-any-session
+      FUZZ_RUNS: '600'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Throw anything at every route
+        run: npm run fuzz
+
+  advisories:
+    name: Fix what npm reports, then prove it still works
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    concurrency:
+      group: advisories
+      cancel-in-progress: false
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: boost_my_spot
+          POSTGRES_PASSWORD: boost_my_spot
+          POSTGRES_DB: boost_my_spot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://boost_my_spot:boost_my_spot@127.0.0.1:5432/boost_my_spot
+      WEB_ORIGIN: http://localhost:5173
+      BETTER_AUTH_URL: http://localhost:5173
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-for-any-session
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Look for a smaller way out of every advisory
+        run: npm run advisories
+
+      - name: See whether anything moved
+        id: moved
+        run: |
+          if git diff --quiet -- package.json package-lock.json; then
+            echo 'anything=no' >> "$GITHUB_OUTPUT"
+          else
+            echo 'anything=yes' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install what the new lockfile asks for
+        if: steps.moved.outputs.anything == 'yes'
+        run: npm ci
+
+      - name: Prove the new tree still works
+        id: verify
+        if: steps.moved.outputs.anything == 'yes'
+        continue-on-error: true
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run knip
+          npm run build
+          npm run size
+          npm test
+          npm audit --omit=dev --omit=optional --audit-level=high
+
+      - name: Say in the report whether it held up
+        if: steps.moved.outputs.anything == 'yes'
+        run: |
+          {
+            echo ''
+            echo '## Checks run on this branch'
+            echo ''
+            if [ '${{ steps.verify.outcome }}' = 'success' ]; then
+              echo 'Lint, types, dead code, build, first load budget, tests and the production audit all passed here.'
+            else
+              echo 'Something in lint, types, dead code, build, first load budget, tests or the production audit'
+              echo 'failed on this branch. Read the job log before merging — the bump is not safe yet.'
+            fi
+            echo ''
+            echo 'The CI check on this pull request shows a red cross that no job ever filled in. That is'
+            echo 'expected: GitHub refuses to start a run for a pull request its own Actions token opened,'
+            echo 'so the checks above, run before this branch was pushed, are the ones that count. Only the'
+            echo 'browser journeys and the secret scan are missing, and merging runs them on main.'
+          } >> advisories.md
+
+      - name: Open or update the one pull request
+        if: steps.moved.outputs.anything == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B advisories
+          git add package.json package-lock.json
+          git commit -m 'fix: take the smallest dependency bump that closes the open advisories'
+          git push --force origin advisories
+
+          if [ -z "$(gh pr list --head advisories --state open --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head advisories \
+              --title 'fix: close the open npm advisories' --body-file advisories.md
+          else
+            gh pr edit advisories --title 'fix: close the open npm advisories' --body-file advisories.md
+          fi
+
+      - name: Put the report in the run summary
+        if: always()
+        run: |
+          if [ -f advisories.md ]; then cat advisories.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Fail if the bump did not hold up
+        if: steps.verify.outcome == 'failure'
+        run: exit 1

@@ -1,0 +1,22 @@
+name: Setup
+description: Install the dependencies on the version of Node the project pins.
+
+inputs:
+  install:
+    description: Whether the job needs node_modules, or only the lockfile.
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: package-lock.json
+
+    - name: Install the dependencies
+      if: inputs.install == 'true'
+      run: npm ci
+      shell: bash
