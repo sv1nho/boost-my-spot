@@ -1,0 +1,17 @@
+.git
+.github
+node_modules
+dist
+coverage
+server/generated
+
+# Secrets and real data must never enter the build context
+.env
+.env.local
+.env.*.local
+backups
+
+e2e/.auth
+e2e/.results
+e2e/.shots
+advisories.md

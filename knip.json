@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "prisma/__tests__/global-setup.ts",
+    "prisma/__tests__/setup-test-database.ts",
+    "scripts/*.ts",
+    "**/*.{test,spec}.{ts,tsx}"
+  ],
+  "project": ["{client,server,shared,prisma,scripts}/**/*.{ts,tsx}"],
+  "ignoreDependencies": ["tailwindcss"]
+}

@@ -1,0 +1,21 @@
+dist
+node_modules
+coverage
+
+# Generated Prisma client, recreated by `npm run db:generate`
+server/generated
+
+# pg_dump backups
+backups
+
+# Secrets — never commit real env files, only .env.example templates
+.env
+.env.local
+.env.*.local
+
+e2e/.auth
+e2e/.results
+e2e/.shots
+
+# Report written by `npm run advisories`, carried into the pull request body
+advisories.md
