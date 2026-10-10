@@ -121,8 +121,17 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-not-used-for-any-session
 
     steps:
+      - name: Borrow the app identity, so the pull request is not opened by this run
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_KEY }}
+
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          token: ${{ steps.app.outputs.token }}
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -169,17 +178,12 @@ jobs:
               echo 'Something in lint, types, dead code, build, first load budget, tests or the production audit'
               echo 'failed on this branch. Read the job log before merging — the bump is not safe yet.'
             fi
-            echo ''
-            echo 'The CI check on this pull request shows a red cross that no job ever filled in. That is'
-            echo 'expected: GitHub refuses to start a run for a pull request its own Actions token opened,'
-            echo 'so the checks above, run before this branch was pushed, are the ones that count. Only the'
-            echo 'browser journeys and the secret scan are missing, and merging runs them on main.'
           } >> advisories.md
 
       - name: Open or update the one pull request
         if: steps.moved.outputs.anything == 'yes'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
