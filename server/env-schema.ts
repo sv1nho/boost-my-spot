@@ -13,10 +13,22 @@ const httpUrl = z.string().refine(isHttpUrl, {
   message: 'must be an http(s) URL, e.g. http://localhost:5173',
 })
 
-const optionalSecret = z.preprocess(
-  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-  z.string().min(1).optional()
+const emptyToUndefined = (value: unknown): unknown =>
+  typeof value === 'string' && value.trim() === '' ? undefined : value
+
+const optionalSecret = z.preprocess(emptyToUndefined, z.string().min(1).optional())
+
+const optionalHttpUrl = z.preprocess(emptyToUndefined, httpUrl.optional())
+
+const optionalHex32Bytes = z.preprocess(
+  emptyToUndefined,
+  z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, { message: 'must be 64 hexadecimal characters (32 bytes)' })
+    .optional()
 )
+
+const optionalLongSecret = z.preprocess(emptyToUndefined, z.string().min(32).optional())
 
 export const envSchema = z
   .object({
@@ -51,6 +63,22 @@ export const envSchema = z
 
     GITHUB_CLIENT_ID: optionalSecret,
     GITHUB_CLIENT_SECRET: optionalSecret,
+
+    SECRET_BOX_KEY: optionalHex32Bytes,
+    ORDER_LINK_SECRET: optionalLongSecret,
+
+    UPGRADER_API_URL: optionalHttpUrl,
+    UPGRADER_API_KEY: optionalSecret,
+
+    NOWPAYMENTS_API_URL: optionalHttpUrl,
+    NOWPAYMENTS_API_KEY: optionalSecret,
+    NOWPAYMENTS_IPN_SECRET: optionalSecret,
+
+    RESEND_API_URL: optionalHttpUrl,
+    RESEND_API_KEY: optionalSecret,
+    MAIL_FROM: optionalSecret,
+
+    ADMIN_EMAILS: optionalSecret,
   })
   .superRefine((value, ctx) => {
     const pairs = [
@@ -103,6 +131,37 @@ export const envSchema = z
           code: 'custom',
           path: [key],
           message: 'must use https in production, session cookies are set with the Secure flag',
+        })
+      }
+    }
+
+    const requiredInProduction = [
+      'SECRET_BOX_KEY',
+      'ORDER_LINK_SECRET',
+      'UPGRADER_API_URL',
+      'UPGRADER_API_KEY',
+      'NOWPAYMENTS_API_URL',
+      'NOWPAYMENTS_API_KEY',
+      'NOWPAYMENTS_IPN_SECRET',
+      'RESEND_API_URL',
+      'RESEND_API_KEY',
+      'MAIL_FROM',
+      'ADMIN_EMAILS',
+    ] as const
+
+    for (const key of requiredInProduction) {
+      if (value[key] === undefined) {
+        ctx.addIssue({ code: 'custom', path: [key], message: 'is required in production' })
+      }
+    }
+
+    for (const key of ['UPGRADER_API_URL', 'NOWPAYMENTS_API_URL', 'RESEND_API_URL'] as const) {
+      const url = value[key]
+      if (typeof url === 'string' && !url.startsWith('https://')) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'must use https in production',
         })
       }
     }
