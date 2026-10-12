@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: sv1nho/ci/.github/workflows/pipeline.yml@af57c51fa73ed561837160fdd8a2980ad08d0a96
+    uses: sv1nho/ci/.github/workflows/pipeline.yml@ba4a51a36d98ace6e55cdb44357c0e37c6bc21f9
     with:
       e2e_base_url: http://127.0.0.1:3101
     secrets: inherit
