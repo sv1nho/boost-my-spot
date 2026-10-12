@@ -19,4 +19,16 @@ jobs:
     uses: sv1nho/ci/.github/workflows/pipeline.yml@v1
     with:
       e2e_base_url: http://127.0.0.1:3101
+      boot_env: |
+        SECRET_BOX_KEY=0000000000000000000000000000000000000000000000000000000000000000
+        ORDER_LINK_SECRET=ci-only-order-link-secret-at-least-32-chars
+        UPGRADER_API_URL=https://upgrader.example
+        UPGRADER_API_KEY=ci-only-not-a-real-key
+        NOWPAYMENTS_API_URL=https://nowpayments.example
+        NOWPAYMENTS_API_KEY=ci-only-not-a-real-key
+        NOWPAYMENTS_IPN_SECRET=ci-only-not-a-real-secret
+        RESEND_API_URL=https://resend.example
+        RESEND_API_KEY=ci-only-not-a-real-key
+        MAIL_FROM=orders@boostmyspot.example
+        ADMIN_EMAILS=admin@boostmyspot.example
     secrets: inherit
