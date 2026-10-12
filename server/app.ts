@@ -9,6 +9,10 @@ import { createApiLimiter } from './middleware/rate-limit.js'
 import { createOriginGuard } from './middleware/same-origin.js'
 import { requestLog } from './middleware/request-log.js'
 import { cacheBuiltFiles, createSecurityHeaders, createWebAppFallback } from './middleware/web-app.js'
+import { createCatalogRouter } from './routes/catalog.js'
+import { createOrdersRouter } from './routes/orders.js'
+import { createPaymentsRouter } from './routes/payments.js'
+import { orders, payments } from './deps.js'
 import { prisma } from './prisma.js'
 import { env, isDevelopment, isProduction } from './env.js'
 
@@ -28,6 +32,8 @@ export function createApp (): Express {
 
   app.all('/api/auth/{*any}', toNodeHandler(auth))
 
+  app.use('/api/payments', createPaymentsRouter(orders, payments))
+
   app.use(express.json({ limit: '256kb' }))
 
   app.get('/api/health', (_req, res, next) => {
@@ -46,6 +52,9 @@ export function createApp (): Express {
 
   app.use('/api', createApiLimiter(env.RATE_LIMIT_PER_MINUTE))
   app.use('/api', createOriginGuard(env.WEB_ORIGIN))
+
+  app.use('/api/catalog', createCatalogRouter(orders))
+  app.use('/api/orders', createOrdersRouter(orders))
 
   app.use(createWebAppFallback(WEB_APP_ROOT))
 

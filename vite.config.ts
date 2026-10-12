@@ -94,6 +94,7 @@ export default defineConfig(({ mode }) => {
           'server/prisma-client.ts',
           'server/env.ts',
           'server/auth/auth.ts',
+          'server/deps.ts',
         ],
       },
     },
