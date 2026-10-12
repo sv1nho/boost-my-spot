@@ -21,7 +21,7 @@ type Deps = {
   config: { paymentWindowMinutes: number; publicUrl: string }
 }
 
-type Orders = {
+export type Orders = {
   catalog: () => Promise<Catalog>
   create: (input: CreateOrderInput) => Promise<CreatedOrder>
   view: (token: string) => Promise<OrderView>
