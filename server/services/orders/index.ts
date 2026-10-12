@@ -3,11 +3,14 @@ import { AppError } from '../../errors.js'
 import { PLANS, PLAN_CURRENCY } from '../../../shared/plans.js'
 import { generateReference } from './reference.js'
 import { toCatalog, toOrderView } from './mapper.js'
+import { canTransition } from '../../../shared/transitions.js'
+import { isOrderStatus } from '../../../shared/order-status.js'
+import type { OrderStatus } from '../../../shared/order-status.js'
 import type { Catalog, CreateOrderInput, CreatedOrder, OrderView } from '../../../shared/order.js'
 import type { SecretBox } from '../secret-box.js'
 import type { OrderLink } from '../order-link.js'
 import type { Upgrader } from '../upgrader.js'
-import type { PaymentProvider } from '../payments/provider.js'
+import type { PaymentNotification, PaymentProvider } from '../payments/provider.js'
 
 type Deps = {
   secretBox: SecretBox
@@ -23,6 +26,36 @@ type Orders = {
   create: (input: CreateOrderInput) => Promise<CreatedOrder>
   view: (token: string) => Promise<OrderView>
   lookup: (input: { reference: string; email: string }) => Promise<{ token: string }>
+  applyPayment: (notification: PaymentNotification) => Promise<void>
+  submitSpotify: (token: string, spDc: string) => Promise<OrderView>
+}
+
+const COOKIE_STATUSES = new Set<OrderStatus>(['awaiting_payment', 'paid', 'upgrading', 'renewing'])
+
+type OrderPatch = {
+  paidAt?: Date
+  activatedAt?: Date
+  spDcSealed?: Uint8Array<ArrayBuffer> | null
+  lastError?: string | null
+}
+
+const advance = async (
+  order: { id: string; status: string },
+  to: OrderStatus,
+  actor: string,
+  note: string,
+  patch: OrderPatch = {}
+): Promise<boolean> => {
+  if (!isOrderStatus(order.status) || !canTransition(order.status, to)) return false
+
+  const data = { status: to, ...patch, ...(COOKIE_STATUSES.has(to) ? {} : { spDcSealed: null }) }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.order.updateMany({ where: { id: order.id, status: order.status }, data })
+    if (updated.count === 0) return false
+    await tx.orderEvent.create({ data: { orderId: order.id, status: to, actor, note } })
+    return true
+  })
 }
 
 const MAX_REFERENCE_TRIES = 5
@@ -121,5 +154,51 @@ export function createOrders ({ secretBox, orderLink, upgrader, payments, now, c
     return { token: orderLink.sign(order.id) }
   }
 
-  return { catalog, create, view, lookup }
+  const applyPayment = async (notification: PaymentNotification): Promise<void> => {
+    const order = await prisma.order.findFirst({
+      where: { reference: notification.reference },
+      select: { id: true, status: true, priceCents: true, currency: true },
+    })
+    if (order === null) return
+
+    if (notification.status === 'paid') {
+      const matches =
+        notification.priceAmountCents === order.priceCents && notification.currency === order.currency
+      if (matches) {
+        await advance(order, 'paid', 'payment', 'Payment received', { paidAt: now() })
+      } else {
+        await advance(order, 'underpaid', 'payment', 'Payment did not match the order total')
+      }
+      return
+    }
+
+    if (notification.status === 'underpaid') {
+      await advance(order, 'underpaid', 'payment', 'Partial payment received')
+      return
+    }
+
+    await advance(order, 'expired', 'payment', 'Payment window expired')
+  }
+
+  const submitSpotify = async (token: string, spDc: string): Promise<OrderView> => {
+    const id = orderLink.verify(token)
+    if (id === null) return notFound()
+
+    const order = await prisma.order.findUnique({ where: { id } })
+    if (order === null) return notFound()
+
+    const sealed = new Uint8Array(secretBox.seal(spDc))
+
+    if (order.status === 'needs_action') {
+      await advance(order, 'paid', 'customer', 'New session key provided', { spDcSealed: sealed })
+    } else if (order.status === 'active') {
+      await advance(order, 'renewing', 'customer', 'Warranty renewal requested', { spDcSealed: sealed })
+    } else {
+      throw new AppError('CONFLICT', 'This order is not waiting for a session key.')
+    }
+
+    return toOrderView(await prisma.order.findUniqueOrThrow({ where: { id } }))
+  }
+
+  return { catalog, create, view, lookup, applyPayment, submitSpotify }
 }

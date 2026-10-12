@@ -127,3 +127,85 @@ describe('orders service', () => {
     expect(catalog.plans).toEqual([{ id: 'lifetime', label: 'Lifetime', priceCents: 2000, currency: 'EUR' }])
   })
 })
+
+const makeAwaiting = async (orders: ReturnType<typeof build>) => {
+  const { token } = await orders.create(input())
+  const id = orderLink.verify(token) as string
+  const order = await prisma.order.findUniqueOrThrow({ where: { id } })
+  return { token, id, reference: order.reference }
+}
+
+describe('orders payment webhook', () => {
+  it('marks a matching payment as paid, once', async () => {
+    const orders = build({ US: 5 })
+    const { id, reference } = await makeAwaiting(orders)
+
+    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 2000, currency: 'EUR' })
+    const paid = await prisma.order.findUniqueOrThrow({ where: { id } })
+    expect(paid.status).toBe('paid')
+    expect(paid.paidAt).not.toBeNull()
+
+    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 2000, currency: 'EUR' })
+    const again = await prisma.order.findUniqueOrThrow({ where: { id } })
+    expect(again.status).toBe('paid')
+    expect(await prisma.orderEvent.count({ where: { orderId: id, status: 'paid' } })).toBe(1)
+  })
+
+  it('marks a wrong amount as underpaid', async () => {
+    const orders = build({ US: 5 })
+    const { id, reference } = await makeAwaiting(orders)
+    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 1500, currency: 'EUR' })
+    expect((await prisma.order.findUniqueOrThrow({ where: { id } })).status).toBe('underpaid')
+  })
+
+  it('expires the order and wipes the cookie', async () => {
+    const orders = build({ US: 5 })
+    const { id, reference } = await makeAwaiting(orders)
+    await orders.applyPayment({ reference, status: 'expired', priceAmountCents: 2000, currency: 'EUR' })
+    const expired = await prisma.order.findUniqueOrThrow({ where: { id } })
+    expect(expired.status).toBe('expired')
+    expect(expired.spDcSealed).toBeNull()
+  })
+
+  it('ignores a notification for an unknown order', async () => {
+    const orders = build({ US: 5 })
+    await expect(
+      orders.applyPayment({ reference: 'BMS-00000000', status: 'paid', priceAmountCents: 2000, currency: 'EUR' })
+    ).resolves.toBeUndefined()
+  })
+})
+
+describe('orders cookie resubmission', () => {
+  it('takes a new cookie for an order that needs action and moves it back to paid', async () => {
+    const orders = build({ US: 5 })
+    const { token, id } = await makeAwaiting(orders)
+    await prisma.order.update({ where: { id }, data: { status: 'needs_action', spDcSealed: null } })
+
+    const view = await orders.submitSpotify(token, 'FRESH-COOKIE')
+    expect(view.status).toBe('paid')
+    const order = await prisma.order.findUniqueOrThrow({ where: { id } })
+    expect(secretBox.open(order.spDcSealed as Buffer)).toBe('FRESH-COOKIE')
+    expect(await prisma.orderEvent.count({ where: { orderId: id, actor: 'customer' } })).toBe(1)
+  })
+
+  it('takes a cookie for a warranty renewal on an active order', async () => {
+    const orders = build({ US: 5 })
+    const { token, id } = await makeAwaiting(orders)
+    await prisma.order.update({ where: { id }, data: { status: 'active', spDcSealed: null } })
+
+    const view = await orders.submitSpotify(token, 'RENEW-COOKIE')
+    expect(view.status).toBe('renewing')
+    expect(secretBox.open((await prisma.order.findUniqueOrThrow({ where: { id } })).spDcSealed as Buffer)).toBe('RENEW-COOKIE')
+  })
+
+  it('refuses a cookie when the order is not waiting for one', async () => {
+    const orders = build({ US: 5 })
+    const { token } = await makeAwaiting(orders)
+    await expect(orders.submitSpotify(token, 'X')).rejects.toMatchObject({ code: 'CONFLICT' })
+  })
+
+  it('refuses a tampered token', async () => {
+    const orders = build({ US: 5 })
+    await expect(orders.submitSpotify('tampered.token', 'X')).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+})
