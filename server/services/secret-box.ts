@@ -5,7 +5,7 @@ const KEY_LENGTH = 32
 const IV_LENGTH = 12
 const TAG_LENGTH = 16
 
-type SecretBox = {
+export type SecretBox = {
   seal: (plaintext: string) => Buffer
   open: (sealed: Buffer) => string
 }

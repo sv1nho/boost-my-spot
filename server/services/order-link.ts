@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-type OrderLink = {
+export type OrderLink = {
   sign: (orderId: string) => string
   verify: (token: string) => string | null
 }

@@ -19,7 +19,7 @@ type UpgradeResult =
   | { ok: true; account: string | null }
   | { ok: false; reason: UpgraderErrorReason; message: string; retryAfter: number | null }
 
-type Upgrader = {
+export type Upgrader = {
   stock: () => Promise<StockResult>
   info: (key: string) => Promise<KeyInfo>
   upgrade: (input: { key: string; spDc: string; country: string }) => Promise<UpgradeResult>
