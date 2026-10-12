@@ -70,3 +70,70 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+model Order {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reference  String @unique
+  email      String
+  locale     String @default("en")
+  plan       String @default("lifetime")
+  country    String
+  priceCents Int    @map("price_cents")
+  currency   String @default("EUR")
+  status     String @default("awaiting_payment")
+
+  spDcSealed Bytes? @map("sp_dc_sealed")
+
+  paymentProvider String? @map("payment_provider")
+  paymentId       String? @unique @map("payment_id")
+
+  spotifyAccount String? @map("spotify_account")
+
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime? @map("next_attempt_at") @db.Timestamptz
+  lastError     String?   @map("last_error")
+
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  paidAt      DateTime? @map("paid_at") @db.Timestamptz
+  activatedAt DateTime? @map("activated_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  events OrderEvent[]
+  key    UpgradeKey?
+
+  @@index([status, nextAttemptAt])
+  @@index([email])
+  @@map("orders")
+}
+
+model OrderEvent {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId String @map("order_id") @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  status String
+  actor  String
+  note   String?
+  at     DateTime @default(now()) @db.Timestamptz
+
+  @@index([orderId, at])
+  @@map("order_events")
+}
+
+model UpgradeKey {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  keyHash   String @unique @map("key_hash")
+  keySealed Bytes  @map("key_sealed")
+  plan      String @default("lifetime")
+
+  orderId String? @unique @map("order_id") @db.Uuid
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  upstreamStatus String?   @map("upstream_status")
+  checkedAt      DateTime? @map("checked_at") @db.Timestamptz
+  importedAt     DateTime  @default(now()) @map("imported_at") @db.Timestamptz
+
+  @@index([plan, orderId])
+  @@map("upgrade_keys")
+}
