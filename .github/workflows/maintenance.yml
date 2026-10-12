@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   maintenance:
-    uses: sv1nho/ci/.github/workflows/maintenance.yml@ba4a51a36d98ace6e55cdb44357c0e37c6bc21f9
+    uses: sv1nho/ci/.github/workflows/maintenance.yml@v1
     with:
       e2e_base_url: http://127.0.0.1:3101
     secrets: inherit
