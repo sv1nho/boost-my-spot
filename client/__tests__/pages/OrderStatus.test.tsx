@@ -44,6 +44,18 @@ describe('OrderStatus page', () => {
     expect(screen.getByText('Loading your order…')).toBeInTheDocument()
   })
 
+  it('tolerates a route without a token', () => {
+    pollingMock.mockReturnValue({ order: makeOrder('active'), error: null, reload })
+    render(
+      <LocaleProvider>
+        <MemoryRouter initialEntries={['/x']}>
+          <Routes><Route path='/x' element={<OrderStatus />} /></Routes>
+        </MemoryRouter>
+      </LocaleProvider>
+    )
+    expect(screen.getByText('Your order')).toBeInTheDocument()
+  })
+
   it('shows an error with a retry', async () => {
     pollingMock.mockReturnValue({ order: null, error: 'Server down', reload })
     renderAt('/orders/tok')
@@ -99,5 +111,71 @@ describe('OrderStatus page', () => {
     }) as unknown as typeof useOrderPolling)
     renderAt('/orders/tok')
     expect(await screen.findByText('Your Premium is active!')).toBeInTheDocument()
+  })
+
+  it('stays quiet when the status changes to a plain in-progress one', () => {
+    pollingMock.mockImplementation(((_token: string, onChange?: (n: string, p: string | null) => void) => {
+      useEffect(() => { onChange?.('paid', 'awaiting_payment') }, [onChange])
+      return { order: makeOrder('paid'), error: null, reload }
+    }) as unknown as typeof useOrderPolling)
+    renderAt('/orders/tok')
+    expect(screen.queryByText('Your Premium is active!')).toBeNull()
+  })
+
+  it('stays quiet on the very first load', () => {
+    pollingMock.mockImplementation(((_token: string, onChange?: (n: string, p: string | null) => void) => {
+      useEffect(() => { onChange?.('active', null) }, [onChange])
+      return { order: makeOrder('active'), error: null, reload }
+    }) as unknown as typeof useOrderPolling)
+    renderAt('/orders/tok')
+    expect(screen.queryByText('Your Premium is active!')).toBeNull()
+  })
+
+  it('warns when the status changes to needs_action', async () => {
+    pollingMock.mockImplementation(((_token: string, onChange?: (n: string, p: string | null) => void) => {
+      useEffect(() => { onChange?.('needs_action', 'upgrading') }, [onChange])
+      return { order: makeOrder('needs_action'), error: null, reload }
+    }) as unknown as typeof useOrderPolling)
+    renderAt('/orders/tok')
+    expect(await screen.findByText('We need your Spotify session key again.')).toBeInTheDocument()
+  })
+
+  it('copies even when the clipboard is unavailable', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+    pollingMock.mockReturnValue({ order: makeOrder('active'), error: null, reload })
+    renderAt('/orders/tok')
+    await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(screen.getByText('Order number copied.')).toBeInTheDocument()
+  })
+
+  it('explains a failed order', () => {
+    pollingMock.mockReturnValue({ order: makeOrder('failed'), error: null, reload })
+    renderAt('/orders/tok')
+    expect(screen.getByText(/could not complete/i)).toBeInTheDocument()
+  })
+
+  it('explains a payment that did not go through', () => {
+    pollingMock.mockReturnValue({ order: makeOrder('underpaid'), error: null, reload })
+    renderAt('/orders/tok')
+    expect(screen.getByText(/did not go through/i)).toBeInTheDocument()
+  })
+
+  it('shows a refusal when the cookie submission fails', async () => {
+    submitMock.mockRejectedValue(new Error('offline'))
+    pollingMock.mockReturnValue({ order: makeOrder('needs_action'), error: null, reload })
+    renderAt('/orders/tok')
+    await userEvent.type(screen.getByLabelText('Spotify session key'), 'AQA-fresh-cookie-xyz')
+    await userEvent.click(screen.getByRole('button', { name: 'Submit the new key' }))
+    expect(await screen.findByText(/could not be reached/i)).toBeInTheDocument()
+  })
+
+  it('dismisses the toast', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn() } })
+    pollingMock.mockReturnValue({ order: makeOrder('active'), error: null, reload })
+    renderAt('/orders/tok')
+    await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(screen.getByText('Order number copied.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByText('Order number copied.')).toBeNull()
   })
 })

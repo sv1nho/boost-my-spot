@@ -40,8 +40,8 @@ export function OrderStatus () {
       .catch((cause: unknown) => { setSubmitError(refusalMessage(cause)); setSubmitting(false) })
   }
 
-  const copy = (): void => {
-    void navigator.clipboard?.writeText(order?.reference ?? '')
+  const copy = (reference: string): void => {
+    void navigator.clipboard?.writeText(reference)
     setNotice(t('Order number copied.'))
   }
 
@@ -77,7 +77,7 @@ export function OrderStatus () {
 
       <div className='detail-row'>
         <span className='detail-value'>{order.reference}</span>
-        <button type='button' className='btn btn-ghost btn-compact' onClick={copy}>{t('Copy')}</button>
+        <button type='button' className='btn btn-ghost btn-compact' onClick={() => { copy(order.reference) }}>{t('Copy')}</button>
       </div>
 
       <OrderTimeline status={order.status} />

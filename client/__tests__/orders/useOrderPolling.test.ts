@@ -100,4 +100,13 @@ describe('useOrderPolling', () => {
     await tick()
     expect(getOrderMock).toHaveBeenCalledTimes(1)
   })
+
+  it('drops a result that arrives after unmount', async () => {
+    getOrderMock.mockResolvedValue(order('paid'))
+    const { result, unmount } = renderHook(() => useOrderPolling('tok'))
+    unmount()
+    await flush()
+    expect(result.current.order).toBeNull()
+    expect(getOrderMock).toHaveBeenCalledTimes(1)
+  })
 })

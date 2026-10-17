@@ -93,6 +93,16 @@ describe('Order page', () => {
     expect(await screen.findByText('That country is out of stock right now.')).toBeInTheDocument()
   })
 
+  it('shows a generic message when the network fails', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    createOrderMock.mockRejectedValue(new Error('offline'))
+    renderOrder()
+    await screen.findByText('Order your upgrade')
+    await fillValid()
+    await userEvent.click(screen.getByRole('button', { name: 'Pay with crypto' }))
+    expect(await screen.findByText(/could not be reached/i)).toBeInTheDocument()
+  })
+
   it('reveals and hides the session key', async () => {
     getCatalogMock.mockResolvedValue(catalog)
     renderOrder()
