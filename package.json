@@ -1,7 +1,7 @@
 {
   "name": "boost_my_spot",
   "version": "1.0.0",
-  "description": "boost-my-spot — Spotify Premium upgrade reseller front",
+  "description": "boost-my-spot \u2014 Spotify Premium upgrade reseller front",
   "private": true,
   "type": "module",
   "repository": {
@@ -96,7 +96,6 @@
     "prisma": "7.10.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "react-hook-form": "7.78.0",
     "react-router": "8.3.0",
     "rimraf": "6.1.3",
     "semver": "7.8.5",
