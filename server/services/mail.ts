@@ -6,9 +6,9 @@ type Deps = {
   timeoutMs?: number
 }
 
-type Mail = { to: string; subject: string; html: string; text?: string }
+export type Mail = { to: string; subject: string; html: string; text?: string }
 
-type Mailer = {
+export type Mailer = {
   send: (mail: Mail) => Promise<void>
 }
 
