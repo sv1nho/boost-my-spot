@@ -75,4 +75,11 @@ export const FRENCH: Record<string, string> = {
   'Action needed': 'Action requise',
   'Could not be completed': 'Impossible à finaliser',
   'Refunded': 'Remboursé',
+  'Enter your order number and the email you used.': 'Entrez votre numéro de commande et l’e-mail utilisé.',
+  'Order number': 'Numéro de commande',
+  'Enter your order number.': 'Entrez votre numéro de commande.',
+  'Looking…': 'Recherche…',
+  'Find my order': 'Trouver ma commande',
+  'Terms': 'Conditions',
+  'Privacy': 'Confidentialité',
 }

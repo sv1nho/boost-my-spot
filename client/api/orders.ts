@@ -9,3 +9,6 @@ export const getOrder = (token: string, signal?: AbortSignal): Promise<OrderView
 
 export const submitSpotify = (token: string, spDc: string): Promise<OrderView> =>
   request<OrderView>(`/api/orders/${encodeURIComponent(token)}/spotify`, { method: 'POST', body: { spDc } })
+
+export const lookupOrder = (input: { reference: string; email: string }): Promise<{ token: string }> =>
+  request<{ token: string }>('/api/orders/lookup', { method: 'POST', body: input })

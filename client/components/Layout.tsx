@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { LanguageToggle } from '../i18n/LanguageToggle.js'
 import { useT } from '../i18n/context.js'
 
@@ -52,6 +52,11 @@ export function Layout () {
         <strong>boost-my-spot</strong> {t('— Spotify Premium upgrades')}
         <br />
         {t('Not affiliated with, or endorsed by, Spotify AB.')}
+        <div className='footer-links'>
+          <Link className='link' to='/help'>{t('Help')}</Link>
+          <Link className='link' to='/terms'>{t('Terms')}</Link>
+          <Link className='link' to='/privacy'>{t('Privacy')}</Link>
+        </div>
       </div>
     </div>
   )
