@@ -15,7 +15,7 @@ type StockResult = { countries: Record<string, number> }
 
 type KeyInfo = { status: string; username: string | null; country: string | null }
 
-type UpgradeResult =
+export type UpgradeResult =
   | { ok: true; account: string | null }
   | { ok: false; reason: UpgraderErrorReason; message: string; retryAfter: number | null }
 

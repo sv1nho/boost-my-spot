@@ -1,6 +1,7 @@
 import { createApp } from './app.js'
 import { env } from './env.js'
 import { enabledProviders } from './auth/auth.js'
+import { startWorker } from './worker/start.js'
 import { prisma } from './prisma.js'
 import { log } from './log.js'
 
@@ -16,10 +17,14 @@ const server = app.listen(env.API_PORT, env.API_HOST, () => {
   log('info', 'listening', { host: env.API_HOST, port: env.API_PORT, mode: env.NODE_ENV })
 })
 
+const stopWorker = startWorker()
+
 const GIVE_UP_AFTER = 10_000
 
 const shutdown = (signal: string): void => {
   log('info', 'shutting down', { signal })
+
+  stopWorker()
 
   const giveUp = setTimeout(() => {
     log('warn', 'a connection would not close in time, leaving anyway')

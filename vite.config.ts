@@ -95,6 +95,7 @@ export default defineConfig(({ mode }) => {
           'server/env.ts',
           'server/auth/auth.ts',
           'server/deps.ts',
+          'server/worker/start.ts',
         ],
       },
     },
