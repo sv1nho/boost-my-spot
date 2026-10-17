@@ -1736,3 +1736,45 @@ h1, h2, h3 { font-family: var(--font-display); }
     color: var(--color-primary-hover);
   }
 }
+
+@layer components {
+  .status-awaiting_payment,
+  .status-underpaid,
+  .status-expired,
+  .status-refunded {
+    background: var(--status-pending-soft);
+    border-color: var(--status-pending-line);
+    color: var(--status-pending);
+  }
+
+  .status-paid,
+  .status-upgrading,
+  .status-renewing {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    color: var(--color-primary-hover);
+  }
+
+  .status-active {
+    background: var(--status-refunded-soft);
+    border-color: var(--status-refunded-line);
+    color: var(--status-refunded);
+  }
+
+  .status-needs_action {
+    background: var(--status-received-soft);
+    border-color: var(--status-received-line);
+    color: var(--status-received);
+  }
+
+  .status-failed {
+    background: var(--status-rejected-soft);
+    border-color: var(--status-rejected-line);
+    color: var(--status-rejected);
+  }
+
+  .timeline-step-current .timeline-mark {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring);
+  }
+}
