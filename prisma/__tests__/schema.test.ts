@@ -76,13 +76,16 @@ describe('orders constraints', () => {
     ).resolves.toMatchObject({ status: 'active' })
   })
 
-  it('bumps updated_at through the trigger, even on a raw update', async () => {
+  it('bumps updated_at through the trigger on a raw update', async () => {
     const order = await makeOrder()
-    const before = order.updatedAt.getTime()
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    await prisma.$executeRawUnsafe(`UPDATE orders SET "last_error" = 'x' WHERE id = $1::uuid`, order.id)
-    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
-    expect(after.updatedAt.getTime()).toBeGreaterThan(before)
+    const stamp = async (value: string): Promise<number> => {
+      await prisma.$executeRawUnsafe(`UPDATE orders SET "last_error" = $2 WHERE id = $1::uuid`, order.id, value)
+      return (await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).updatedAt.getTime()
+    }
+    const first = await stamp('a')
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    const second = await stamp('b')
+    expect(second).toBeGreaterThan(first)
   })
 })
 
