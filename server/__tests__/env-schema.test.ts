@@ -58,9 +58,9 @@ describe('env schema', () => {
     expect(paths(dev({ BETTER_AUTH_SECRET: 'short' }))).toContain('BETTER_AUTH_SECRET')
   })
 
-  it('wants both halves of an oauth pair or neither', () => {
+  it('wants both halves of the oauth pair or neither', () => {
     expect(paths(dev({ GOOGLE_CLIENT_ID: 'id' }))).toContain('GOOGLE_CLIENT_SECRET')
-    expect(paths(dev({ GITHUB_CLIENT_SECRET: 'secret' }))).toContain('GITHUB_CLIENT_ID')
+    expect(paths(dev({ GOOGLE_CLIENT_SECRET: 'secret' }))).toContain('GOOGLE_CLIENT_ID')
   })
 
   it('checks the secret-box key and the link secret', () => {

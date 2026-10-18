@@ -99,8 +99,8 @@ falls back to readable English.
 
 ## Authentication setup
 
-The back-office signs in with Better Auth (Google and GitHub). Set a session
-secret (`openssl rand -base64 32`) and at least one OAuth pair in `.env`; only
+The back-office signs in with Better Auth through Google. Set a session
+secret (`openssl rand -base64 32`) and the Google OAuth pair in `.env`; only
 emails listed in `ADMIN_EMAILS` can create an account.
 
 ## License

@@ -1,14 +1,17 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { APIError } from 'better-auth/api'
 import { prisma } from '../prisma.js'
 import { env, isProduction } from '../env.js'
 import { resolveEnabledProviders } from './resolve-providers.js'
+import { isAdminEmail, parseAdminEmails } from './admin-emails.js'
 import type { ProviderCredentials } from './resolve-providers.js'
 
 const credentials: ProviderCredentials = {
   google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
-  github: { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET },
 }
+
+const admins = parseAdminEmails(env.ADMIN_EMAILS)
 
 export const enabledProviders = resolveEnabledProviders(credentials)
 
@@ -35,6 +38,17 @@ export const auth = betterAuth({
 
   user: {
     deleteUser: { enabled: true },
+  },
+
+  databaseHooks: {
+    user: {
+      create: {
+        before: (user) =>
+          isAdminEmail(user.email, admins)
+            ? Promise.resolve()
+            : Promise.reject(new APIError('FORBIDDEN', { message: 'This account is not allowed to sign in.' })),
+      },
+    },
   },
 
   socialProviders,

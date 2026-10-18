@@ -61,9 +61,6 @@ export const envSchema = z
     GOOGLE_CLIENT_ID: optionalSecret,
     GOOGLE_CLIENT_SECRET: optionalSecret,
 
-    GITHUB_CLIENT_ID: optionalSecret,
-    GITHUB_CLIENT_SECRET: optionalSecret,
-
     SECRET_BOX_KEY: optionalHex32Bytes,
     ORDER_LINK_SECRET: optionalLongSecret,
 
@@ -83,7 +80,6 @@ export const envSchema = z
   .superRefine((value, ctx) => {
     const pairs = [
       ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
-      ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
     ] as const
 
     let configured = 0

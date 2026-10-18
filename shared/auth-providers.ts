@@ -1,4 +1,4 @@
-export const SOCIAL_PROVIDER_IDS = ['google', 'github'] as const
+export const SOCIAL_PROVIDER_IDS = ['google'] as const
 
 export type SocialProviderId = typeof SOCIAL_PROVIDER_IDS[number]
 
