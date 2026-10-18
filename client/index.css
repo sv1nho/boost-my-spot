@@ -1827,3 +1827,194 @@ h1, h2, h3 { font-family: var(--font-display); }
     margin-top: 0.5rem;
   }
 }
+
+@layer components {
+  .card-subtitle {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .alert-info {
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary-lighter);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .form-textarea {
+    min-height: 8rem;
+    resize: vertical;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+  }
+
+  .admin-shell {
+    width: 100%;
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .admin-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-tabs {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .admin-tab {
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    padding-bottom: 0.25rem;
+    border-bottom: 2px solid transparent;
+  }
+
+  .admin-tab:hover { color: var(--color-text); }
+
+  .admin-tab-active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+  }
+
+  .admin-session {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .admin-user {
+    font-size: 0.8125rem;
+    color: var(--color-text-subtle);
+  }
+
+  .admin-filter { width: auto; }
+
+  .admin-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+
+  .admin-table th {
+    text-align: left;
+    font-weight: 700;
+    color: var(--color-text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.7rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-table td {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  .admin-cell-email { color: var(--color-text-muted); }
+
+  .admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .event-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .event-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: baseline;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .event-item:last-child { border-bottom: 0; }
+
+  .event-time {
+    color: var(--color-text-subtle);
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+
+  .event-status { font-weight: 700; color: var(--color-text); }
+
+  .event-actor {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-subtle);
+  }
+
+  .event-note { color: var(--color-text-muted); }
+
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgb(5 8 12 / 0.72);
+    backdrop-filter: blur(4px);
+  }
+
+  .dialog-card {
+    width: 100%;
+    max-width: 26rem;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dialog-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0 0 0.5rem;
+  }
+
+  .dialog-text {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin: 0 0 1.25rem;
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+}

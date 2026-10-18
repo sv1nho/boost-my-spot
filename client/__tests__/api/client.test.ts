@@ -4,6 +4,7 @@ import {
 } from '../../api/client.js'
 import { getCatalog } from '../../api/catalog.js'
 import { createOrder, getOrder, lookupOrder, submitSpotify } from '../../api/orders.js'
+import { getAdminOrder, getKeyStats, importKeys, listAdminOrders, runAdminAction } from '../../api/admin.js'
 
 const jsonResponse = (body: unknown, status = 200): Response =>
   ({
@@ -107,5 +108,23 @@ describe('endpoint helpers', () => {
     expect(urls[2]).toBe('/api/orders/tok%20en')
     expect(urls[3]).toBe('/api/orders/lookup')
     expect(urls[4]).toBe('/api/orders/tok/spotify')
+  })
+
+  it('calls the admin urls and methods', async () => {
+    const fetchMock = spyFetch().mockResolvedValue(jsonResponse({ orders: [], keys: [] }))
+    await listAdminOrders({ status: 'failed', limit: 10 })
+    await listAdminOrders({})
+    await getAdminOrder('BMS-0000ABCD')
+    await runAdminAction('BMS-0000ABCD', 'retry')
+    await getKeyStats()
+    await importKeys({ plan: 'lifetime', keys: 'K1' })
+    const calls = fetchMock.mock.calls
+    expect(calls[0][0]).toBe('/api/admin/orders?status=failed&limit=10')
+    expect(calls[1][0]).toBe('/api/admin/orders')
+    expect(calls[2][0]).toBe('/api/admin/orders/BMS-0000ABCD')
+    expect(calls[3][0]).toBe('/api/admin/orders/BMS-0000ABCD/action')
+    expect((calls[3][1] as RequestInit).body).toBe('{"action":"retry"}')
+    expect(calls[4][0]).toBe('/api/admin/keys')
+    expect((calls[5][1] as RequestInit).body).toBe('{"plan":"lifetime","keys":"K1"}')
   })
 })

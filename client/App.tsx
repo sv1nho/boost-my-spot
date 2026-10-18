@@ -37,6 +37,33 @@ export const routes: RouteObject[] = [
         path: '/privacy',
         lazy: async () => ({ Component: (await import('./pages/Privacy.js')).Privacy }),
       },
+      {
+        path: '/login',
+        lazy: async () => ({ Component: (await import('./pages/Login.js')).Login }),
+      },
+    ],
+  },
+  {
+    path: '/admin',
+    lazy: async () => ({ Component: (await import('./auth/RequireAdmin.js')).RequireAdmin }),
+    children: [
+      {
+        lazy: async () => ({ Component: (await import('./admin/AdminLayout.js')).AdminLayout }),
+        children: [
+          {
+            index: true,
+            lazy: async () => ({ Component: (await import('./pages/AdminOrders.js')).AdminOrders }),
+          },
+          {
+            path: 'orders/:reference',
+            lazy: async () => ({ Component: (await import('./pages/AdminOrderDetail.js')).AdminOrderDetail }),
+          },
+          {
+            path: 'keys',
+            lazy: async () => ({ Component: (await import('./pages/AdminKeys.js')).AdminKeys }),
+          },
+        ],
+      },
     ],
   },
 ]

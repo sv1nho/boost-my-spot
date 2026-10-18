@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { LocaleProvider } from '../i18n/context.js'
@@ -11,6 +11,25 @@ vi.mock('../api/catalog.js', () => ({
 }))
 vi.mock('../api/orders.js', () => ({
   createOrder: vi.fn(), getOrder: vi.fn(), lookupOrder: vi.fn(), submitSpotify: vi.fn(),
+}))
+let session: { data: unknown; isPending: boolean } = { data: null, isPending: false }
+vi.mock('../auth/client.js', () => ({
+  useSession: () => session,
+  signIn: { social: vi.fn() },
+  signOut: () => Promise.resolve(),
+}))
+vi.mock('../api/admin.js', () => ({
+  listAdminOrders: () => Promise.resolve({ orders: [] }),
+  getAdminOrder: () => Promise.resolve({
+    reference: 'BMS-0000ABCD', email: 'a@b.test', status: 'paid', plan: 'lifetime', country: 'US',
+    priceCents: 2000, currency: 'EUR', attempts: 0, lastError: null,
+    createdAt: '2026-10-18T10:00:00.000Z', paidAt: null, activatedAt: null,
+    locale: 'en', spotifyAccount: null, hasCookie: false, hasKey: false,
+    nextAttemptAt: null, expiresAt: null, updatedAt: '2026-10-18T10:00:00.000Z', events: [],
+  }),
+  getKeyStats: () => Promise.resolve({ keys: [] }),
+  runAdminAction: vi.fn(),
+  importKeys: vi.fn(),
 }))
 vi.mock('../orders/useOrderPolling.js', () => ({
   useOrderPolling: () => ({
@@ -46,5 +65,28 @@ describe('App routes', () => {
   it('mounts with the browser router', async () => {
     render(<App />)
     expect(await screen.findByText('Spotify Premium, upgraded for you')).toBeInTheDocument()
+  })
+})
+
+describe('back-office routes', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ json: () => Promise.resolve({ providers: [] }) } as unknown as Response)
+  })
+  afterEach(() => { vi.restoreAllMocks(); session = { data: null, isPending: false } })
+
+  it('loads the login page', async () => {
+    session = { data: null, isPending: false }
+    renderAt('/login')
+    expect(await screen.findByText('Back-office sign in')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['/admin', 'No orders match this filter yet.'],
+    ['/admin/orders/BMS-0000ABCD', 'BMS-0000ABCD'],
+    ['/admin/keys', 'Upgrade keys'],
+  ])('loads %s when signed in', async (path, text) => {
+    session = { data: { user: { email: 'a@b.test' } }, isPending: false }
+    renderAt(path)
+    expect(await screen.findByText(text)).toBeInTheDocument()
   })
 })
