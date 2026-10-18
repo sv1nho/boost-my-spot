@@ -992,6 +992,22 @@ h1, h2, h3 { font-family: var(--font-display); }
     overflow-wrap: anywhere;
   }
 
+  .reference-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .reference-value {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+  }
+
   @media (max-width: 34rem) {
     .detail-row { grid-template-columns: 1fr; gap: 0; }
   }

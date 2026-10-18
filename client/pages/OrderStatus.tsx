@@ -75,8 +75,8 @@ export function OrderStatus () {
         <StatusPill status={order.status} />
       </div>
 
-      <div className='detail-row'>
-        <span className='detail-value'>{order.reference}</span>
+      <div className='reference-row'>
+        <span className='reference-value'>{order.reference}</span>
         <button type='button' className='btn btn-ghost btn-compact' onClick={() => { copy(order.reference) }}>{t('Copy')}</button>
       </div>
 
