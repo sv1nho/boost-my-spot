@@ -5,6 +5,7 @@ import { createUpgrader } from './services/upgrader.js'
 import { createNowPayments } from './services/payments/nowpayments.js'
 import { createMailer } from './services/mail.js'
 import { createOrders } from './services/orders/index.js'
+import { createAdmin } from './services/admin/index.js'
 
 const PAYMENT_WINDOW_MINUTES = 30
 
@@ -44,3 +45,5 @@ export const orders = createOrders({
   now: () => new Date(),
   config: { paymentWindowMinutes: PAYMENT_WINDOW_MINUTES, publicUrl: env.WEB_ORIGIN },
 })
+
+export const admin = createAdmin({ secretBox, now: () => new Date() })
