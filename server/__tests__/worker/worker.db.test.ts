@@ -122,6 +122,26 @@ describe('worker', () => {
     expect(upgrade).not.toHaveBeenCalled()
   })
 
+  it('reschedules a transient failure with the default backoff', async () => {
+    upgrade.mockResolvedValue({ ok: false, reason: 'transient', message: 'blip', retryAfter: null })
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    await makeKey(null)
+    await worker.runOnce()
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('paid')
+    expect(after.attempts).toBe(1)
+  })
+
+  it('reschedules a rate-limited renewal by its retry-after', async () => {
+    renew.mockResolvedValue({ ok: false, reason: 'rate_limited', message: 'slow', retryAfter: 90 })
+    const order = await makeOrder({ status: 'renewing', spDcSealed: sealed('COOKIE') })
+    await makeKey(order.id)
+    await worker.runOnce()
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('renewing')
+    expect(after.attempts).toBe(1)
+  })
+
   it('renews an active order that asked for the warranty', async () => {
     renew.mockResolvedValue({ ok: true, account: 'u@spotify.test' })
     const order = await makeOrder({ status: 'renewing', spDcSealed: sealed('COOKIE') })
@@ -131,6 +151,89 @@ describe('worker', () => {
 
     expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('active')
     expect(renew).toHaveBeenCalledWith({ key: 'KEY-VALUE', spDc: 'COOKIE', country: 'US' })
+  })
+
+  it('fails a paid order the upstream rejects outright', async () => {
+    upgrade.mockResolvedValue({ ok: false, reason: 'rejected', message: 'account banned', retryAfter: null })
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    await makeKey(null)
+    await worker.runOnce()
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('failed')
+    expect(after.lastError).toBe('account banned')
+    expect(await prisma.upgradeKey.count({ where: { orderId: null } })).toBe(1)
+  })
+
+  it('reschedules a renewal whose key has gone missing', async () => {
+    const order = await makeOrder({ status: 'renewing', spDcSealed: sealed('COOKIE') })
+    await worker.runOnce()
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('renewing')
+    expect(after.attempts).toBe(1)
+  })
+
+  it('keeps working when an email cannot be sent', async () => {
+    send.mockRejectedValue(new Error('smtp down'))
+    upgrade.mockResolvedValue({ ok: true, account: 'u@spotify.test' })
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    await makeKey(null)
+    await worker.runOnce()
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('active')
+  })
+
+  it('retries the key claim when another worker grabs it first', async () => {
+    upgrade.mockResolvedValue({ ok: true, account: 'u@spotify.test' })
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    await makeKey(null)
+    const spy = vi.spyOn(prisma.upgradeKey, 'updateMany')
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValue({ count: 1 })
+    await worker.runOnce()
+    spy.mockRestore()
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('active')
+  })
+
+  it('backs a paid order off by the upstream retry-after', async () => {
+    upgrade.mockResolvedValue({ ok: false, reason: 'rate_limited', message: 'slow down', retryAfter: 120 })
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    await makeKey(null)
+    await worker.runOnce()
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('paid')
+    expect(after.attempts).toBe(1)
+    expect(await prisma.upgradeKey.count({ where: { orderId: null } })).toBe(1)
+  })
+
+  it('asks for a new cookie when a renewal needs one', async () => {
+    const order = await makeOrder({ status: 'renewing', spDcSealed: null })
+    await worker.runOnce()
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('needs_action')
+  })
+
+  it('sends a renewal back to needs_action when its cookie is rejected', async () => {
+    renew.mockResolvedValue({ ok: false, reason: 'cookie_rejected', message: 'bad', retryAfter: null })
+    const order = await makeOrder({ status: 'renewing', spDcSealed: sealed('COOKIE') })
+    await makeKey(order.id)
+    await worker.runOnce()
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('needs_action')
+  })
+
+  it('fails a renewal the upstream rejects', async () => {
+    renew.mockResolvedValue({ ok: false, reason: 'rejected', message: 'gone', retryAfter: null })
+    const order = await makeOrder({ status: 'renewing', spDcSealed: sealed('COOKIE') })
+    await makeKey(order.id)
+    await worker.runOnce()
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('failed')
+  })
+
+  it('retries a renewal that hits a transient error', async () => {
+    renew.mockResolvedValue({ ok: false, reason: 'transient', message: 'oops', retryAfter: null })
+    const order = await makeOrder({ status: 'renewing', spDcSealed: sealed('COOKIE') })
+    await makeKey(order.id)
+    await worker.runOnce()
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('renewing')
+    expect(after.attempts).toBe(1)
   })
 
   it('gives up after the last attempt and marks the order failed', async () => {
