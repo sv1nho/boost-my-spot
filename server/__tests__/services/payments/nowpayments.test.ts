@@ -74,6 +74,24 @@ describe('nowpayments adapter', () => {
     expect(client.verifyNotification(JSON.stringify(expired), sign(expired, SECRET))?.status).toBe('expired')
   })
 
+  it('rejects a correctly signed but malformed notification', () => {
+    const { client } = provider({})
+    const body = { payment_status: 'finished' }
+    expect(client.verifyNotification(JSON.stringify(body), sign(body, SECRET))).toBeNull()
+  })
+
+  it('handles nested arrays in the signed payload', () => {
+    const { client } = provider({})
+    const body = { order_id: 'R', payment_status: 'finished', price_amount: 20, price_currency: 'eur', outputs: [{ b: 2, a: 1 }] }
+    expect(client.verifyNotification(JSON.stringify(body), sign(body, SECRET))?.status).toBe('paid')
+  })
+
+  it('rejects a wrong signature of the same length', () => {
+    const { client } = provider({})
+    const body = { order_id: 'R', payment_status: 'finished', price_amount: 20, price_currency: 'eur' }
+    expect(client.verifyNotification(JSON.stringify(body), 'a'.repeat(128))).toBeNull()
+  })
+
   it('rejects a bad signature or a non-terminal status', () => {
     const { client } = provider({})
     const body = { order_id: 'R', payment_status: 'finished', price_amount: 20, price_currency: 'eur' }

@@ -22,6 +22,13 @@ describe('mailer', () => {
     })
   })
 
+  it('includes the text body when given', async () => {
+    const { fn, calls } = makeFetch(200)
+    const mailer = createMailer({ fetch: fn, baseUrl: 'https://resend.test', apiKey: 'K', from: 'me@b.test' })
+    await mailer.send({ to: 'you@b.test', subject: 'Hi', html: '<p>Hi</p>', text: 'Hi' })
+    expect(JSON.parse(calls[0].init.body as string)).toMatchObject({ text: 'Hi' })
+  })
+
   it('throws when resend refuses', async () => {
     const { fn } = makeFetch(422)
     const mailer = createMailer({ fetch: fn, baseUrl: 'https://resend.test', apiKey: 'K', from: 'me@b.test' })

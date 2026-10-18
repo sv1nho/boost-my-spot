@@ -47,10 +47,23 @@ describe('upgrader adapter', () => {
     })
   })
 
+  it('classifies a plain refusal with no code as rejected', async () => {
+    const { client } = upgrader(() => ({ status: 400, payload: { status: 'error', message: 'no' } }))
+    const result = await client.upgrade({ key: 'K', spDc: 'x', country: 'US' })
+    expect(result.ok ? null : result.reason).toBe('rejected')
+  })
+
   it('classifies a rate limit and keeps retry_after', async () => {
     const { client } = upgrader(() => ({ status: 429, payload: { status: 'error', message: 'slow', retry_after: 1742 } }))
     expect(await client.upgrade({ key: 'K', spDc: 'x', country: 'US' })).toEqual({
       ok: false, reason: 'rate_limited', message: 'slow', retryAfter: 1742,
+    })
+  })
+
+  it('falls back when the error body is not recognisable', async () => {
+    const { client } = upgrader(() => ({ status: 500, payload: {} }))
+    expect(await client.upgrade({ key: 'K', spDc: 'x', country: 'US' })).toEqual({
+      ok: false, reason: 'transient', message: 'The upgrade could not be completed.', retryAfter: null,
     })
   })
 
