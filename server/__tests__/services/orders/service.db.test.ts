@@ -97,6 +97,11 @@ describe('orders service', () => {
     await expect(orders.create(input({ country: 'ANY' }))).resolves.toMatchObject({ paymentUrl: 'https://pay.test/i/1' })
   })
 
+  it('refuses a country the stock listing never mentions', async () => {
+    const orders = build({ DE: 3 })
+    await expect(orders.create(input({ country: 'US' }))).rejects.toMatchObject({ code: 'CONFLICT' })
+  })
+
   it('views an order by its token and never exposes the cookie', async () => {
     const orders = build({ US: 5 })
     const { token } = await orders.create(input())
@@ -104,6 +109,12 @@ describe('orders service', () => {
     expect(view.status).toBe('awaiting_payment')
     expect(Object.keys(view)).not.toContain('spDcSealed')
     await expect(orders.view('tampered.token')).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('reports not found when a valid token points to a missing order', async () => {
+    const orders = build({ US: 5 })
+    const token = orderLink.sign('00000000-0000-0000-0000-000000000000')
+    await expect(orders.view(token)).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 
   it('looks an order up by number and email, and refuses a mismatch', async () => {
@@ -149,6 +160,13 @@ describe('orders payment webhook', () => {
     const again = await prisma.order.findUniqueOrThrow({ where: { id } })
     expect(again.status).toBe('paid')
     expect(await prisma.orderEvent.count({ where: { orderId: id, status: 'paid' } })).toBe(1)
+  })
+
+  it('records a notification that reports a partial payment', async () => {
+    const orders = build({ US: 5 })
+    const { id, reference } = await makeAwaiting(orders)
+    await orders.applyPayment({ reference, status: 'underpaid', priceAmountCents: 1000, currency: 'EUR' })
+    expect((await prisma.order.findUniqueOrThrow({ where: { id } })).status).toBe('underpaid')
   })
 
   it('marks a wrong amount as underpaid', async () => {
@@ -207,5 +225,11 @@ describe('orders cookie resubmission', () => {
   it('refuses a tampered token', async () => {
     const orders = build({ US: 5 })
     await expect(orders.submitSpotify('tampered.token', 'X')).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('reports not found when a valid token submits a cookie for a missing order', async () => {
+    const orders = build({ US: 5 })
+    const token = orderLink.sign('00000000-0000-0000-0000-000000000000')
+    await expect(orders.submitSpotify(token, 'X')).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 })
