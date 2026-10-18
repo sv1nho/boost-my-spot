@@ -4,7 +4,7 @@ export type Locale = typeof LOCALES[number]
 
 export const STORAGE_KEY = 'boostmyspot.locale'
 
-export const isLocale = (value: unknown): value is Locale =>
+const isLocale = (value: unknown): value is Locale =>
   typeof value === 'string' && (LOCALES as readonly string[]).includes(value)
 
 export const LOCALE_LABELS: Record<Locale, string> = {
