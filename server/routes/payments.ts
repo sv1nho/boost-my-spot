@@ -18,7 +18,7 @@ export const createPaymentsRouter = (orders: Orders, payments: PaymentProvider):
     express.raw({ type: '*/*', limit: '256kb' }),
     handle(async (req, res) => {
       const signature = req.header('x-nowpayments-sig') ?? ''
-      const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : ''
+      const rawBody = (req.body as Buffer).toString('utf8')
 
       const notification = payments.verifyNotification(rawBody, signature)
       if (notification === null) {
