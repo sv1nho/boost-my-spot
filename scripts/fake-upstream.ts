@@ -11,8 +11,11 @@ const SELF = `http://127.0.0.1:${String(PORT)}`
 
 const STOCK: Record<string, number> = { US: 100, GB: 80, NL: 50, DE: 0 }
 
-type Invoice = { callback: string; amount: number; currency: string }
+type Invoice = { callback: string; success: string; amount: number; currency: string }
 const invoices = new Map<string, Invoice>()
+
+type SentEmail = { to: string; subject: string; html: string }
+const sentEmails: SentEmail[] = []
 
 const sortDeep = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(sortDeep)
@@ -69,7 +72,7 @@ const server = createServer((req, res) => {
 
     if (method === 'POST' && (path === '/upgrader/upgrade' || path === '/upgrader/renew')) {
       const payload = JSON.parse(await readBody(req)) as { sp_dc?: string }
-      if (payload.sp_dc === 'invalid') {
+      if (payload.sp_dc?.includes('invalid') === true) {
         json(res, 400, { status: 'error', code: 'cookie_rejected', message: 'The session cookie was rejected.' })
         return
       }
@@ -79,10 +82,11 @@ const server = createServer((req, res) => {
 
     if (method === 'POST' && path === '/nowpayments/invoice') {
       const payload = JSON.parse(await readBody(req)) as {
-        order_id: string; price_amount: number; price_currency: string; ipn_callback_url: string
+        order_id: string; price_amount: number; price_currency: string; ipn_callback_url: string; success_url: string
       }
       invoices.set(payload.order_id, {
         callback: payload.ipn_callback_url,
+        success: payload.success_url,
         amount: payload.price_amount,
         currency: payload.price_currency,
       })
@@ -99,15 +103,27 @@ const server = createServer((req, res) => {
         return
       }
       await sendIpn(invoice, orderId)
+      if (invoice.success !== '') {
+        res.writeHead(302, { Location: invoice.success })
+        res.end()
+        return
+      }
       res.writeHead(200, { 'Content-Type': 'text/html' })
       res.end('<p>Payment simulated. Return to the tracking page.</p>')
       return
     }
 
     if (method === 'POST' && path === '/resend/emails') {
-      const payload = JSON.parse(await readBody(req)) as { to?: string; subject?: string }
+      const payload = JSON.parse(await readBody(req)) as { to?: string; subject?: string; html?: string }
+      sentEmails.push({ to: payload.to ?? '', subject: payload.subject ?? '', html: payload.html ?? '' })
       console.log(`[fake-upstream] email to ${payload.to ?? '?'}: ${payload.subject ?? ''}`)
       json(res, 200, { id: 'fake_email' })
+      return
+    }
+
+    if (method === 'GET' && path === '/resend/sent') {
+      const to = url.searchParams.get('to')
+      json(res, 200, { emails: to === null ? sentEmails : sentEmails.filter((email) => email.to === to) })
       return
     }
 
