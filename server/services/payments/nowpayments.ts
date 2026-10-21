@@ -69,15 +69,22 @@ export function createNowPayments ({ fetch, baseUrl, apiKey, ipnSecret, timeoutM
     },
 
     verifyNotification: (rawBody, signature) => {
+      let body: unknown
+      try {
+        body = JSON.parse(rawBody)
+      } catch {
+        return null
+      }
+
       const expected = createHmac('sha512', ipnSecret)
-        .update(JSON.stringify(sortDeep(JSON.parse(rawBody))))
+        .update(JSON.stringify(sortDeep(body)))
         .digest('hex')
 
       const given = Buffer.from(signature)
       const want = Buffer.from(expected)
       if (given.length !== want.length || !timingSafeEqual(given, want)) return null
 
-      const parsed = ipnSchema.safeParse(JSON.parse(rawBody))
+      const parsed = ipnSchema.safeParse(body)
       if (!parsed.success) return null
 
       const status = STATUS[parsed.data.payment_status]

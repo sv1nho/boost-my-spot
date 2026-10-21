@@ -80,6 +80,11 @@ describe('nowpayments adapter', () => {
     expect(client.verifyNotification(JSON.stringify(body), sign(body, SECRET))).toBeNull()
   })
 
+  it('rejects a body that is not valid json', () => {
+    const { client } = provider({})
+    expect(client.verifyNotification('{not json', 'deadbeef')).toBeNull()
+  })
+
   it('handles nested arrays in the signed payload', () => {
     const { client } = provider({})
     const body = { order_id: 'R', payment_status: 'finished', price_amount: 20, price_currency: 'eur', outputs: [{ b: 2, a: 1 }] }
