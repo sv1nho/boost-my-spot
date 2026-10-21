@@ -7,6 +7,23 @@ const databaseUrl = (): string =>
 const PORT = 3101
 const BASE_URL = `http://127.0.0.1:${String(PORT)}`
 
+const FAKE = 'http://127.0.0.1:3199'
+const IPN_SECRET = 'e2e-nowpayments-ipn-secret'
+
+const appEnv = {
+  SECRET_BOX_KEY: '0'.repeat(64),
+  ORDER_LINK_SECRET: 'e2e-order-link-secret-at-least-32-characters',
+  UPGRADER_API_URL: `${FAKE}/upgrader`,
+  UPGRADER_API_KEY: 'e2e-upgrader-key',
+  NOWPAYMENTS_API_URL: `${FAKE}/nowpayments`,
+  NOWPAYMENTS_API_KEY: 'e2e-nowpayments-key',
+  NOWPAYMENTS_IPN_SECRET: IPN_SECRET,
+  RESEND_API_URL: `${FAKE}/resend`,
+  RESEND_API_KEY: 'e2e-resend-key',
+  MAIL_FROM: 'orders@boostmyspot.test',
+  ADMIN_EMAILS: 'browser-test@boostmyspot.test',
+}
+
 export default defineConfig({
   testDir: 'e2e',
   outputDir: 'e2e/.results',
@@ -36,11 +53,15 @@ export default defineConfig({
   webServer: [
     {
       command: 'tsx scripts/fake-upstream.ts',
-      url: 'http://127.0.0.1:3199/upgrader/stock',
+      url: `${FAKE}/upgrader/stock`,
       reuseExistingServer: false,
       timeout: 60_000,
       stdout: 'pipe',
       stderr: 'pipe',
+      env: {
+        FAKE_UPSTREAM_PORT: '3199',
+        NOWPAYMENTS_IPN_SECRET: IPN_SECRET,
+      },
     },
     {
       command: 'npm run e2e:db && npm run build:web && npm run start:api',
@@ -56,9 +77,10 @@ export default defineConfig({
         API_HOST: '127.0.0.1',
         WEB_ORIGIN: BASE_URL,
         BETTER_AUTH_URL: BASE_URL,
+        BETTER_AUTH_SECRET: 'e2e-better-auth-secret-at-least-32-characters',
         DATABASE_URL: databaseUrl(),
         RATE_LIMIT_PER_MINUTE: '100000',
-        ADMIN_EMAILS: 'browser-test@boostmyspot.test',
+        ...appEnv,
       },
     },
   ],
