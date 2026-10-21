@@ -359,7 +359,7 @@ h1, h2, h3 { font-family: var(--font-display); }
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--color-primary);
+    color: var(--color-primary-hover);
   }
 
   @media (max-width: 34rem) {
