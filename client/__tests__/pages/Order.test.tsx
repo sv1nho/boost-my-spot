@@ -19,7 +19,7 @@ const createOrderMock = vi.mocked(createOrder)
 const previewPromoMock = vi.mocked(previewPromo)
 
 const catalog = {
-  plans: [{ id: 'lifetime' as const, label: 'Lifetime', priceCents: 2000, currency: 'EUR' }],
+  plans: [{ id: 'lifetime' as const, label: 'Lifetime', priceCents: 3000, compareAtCents: 6000, currency: 'EUR' }],
   countries: ['US', 'GB'],
 }
 
@@ -56,7 +56,9 @@ describe('Order wizard', () => {
     renderOrder()
     expect(screen.getByText('Loading the offer…')).toBeInTheDocument()
     expect(await screen.findByText('Order your upgrade')).toBeInTheDocument()
-    expect(screen.getByText('€20.00')).toBeInTheDocument()
+    expect(screen.getByText('€30.00')).toBeInTheDocument()
+    expect(screen.getByText('€60.00')).toBeInTheDocument()
+    expect(screen.getByText(/50%/)).toBeInTheDocument()
     expect(screen.getByLabelText('Country')).toBeInTheDocument()
   })
 
@@ -166,7 +168,7 @@ describe('Order wizard', () => {
   it('applies a promo and charges the discounted total', async () => {
     getCatalogMock.mockResolvedValue(catalog)
     createOrderMock.mockResolvedValue({ token: 'tok', paymentUrl: 'https://pay.test/1' })
-    previewPromoMock.mockResolvedValue({ code: 'SAVE25', discountCents: 500, finalCents: 1500 })
+    previewPromoMock.mockResolvedValue({ code: 'SAVE25', discountCents: 500, finalCents: 2500 })
     const assign = vi.fn()
     Object.defineProperty(window, 'location', { configurable: true, value: { assign } })
     renderOrder()
@@ -176,7 +178,7 @@ describe('Order wizard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
     expect(await screen.findByText('Promo code applied.')).toBeInTheDocument()
     expect(previewPromoMock).toHaveBeenCalledWith('save25', 'lifetime')
-    expect(screen.getByText('€15.00')).toBeInTheDocument()
+    expect(screen.getByText('€25.00')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
     expect(createOrderMock).toHaveBeenCalledWith(expect.objectContaining({ promoCode: 'SAVE25' }))

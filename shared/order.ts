@@ -28,6 +28,7 @@ type CatalogPlan = {
   id: PlanId
   label: string
   priceCents: number
+  compareAtCents: number
   currency: string
 }
 

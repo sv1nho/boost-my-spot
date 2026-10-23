@@ -48,6 +48,7 @@ export function toCatalog (countries: string[]): Catalog {
       id,
       label: PLANS[id].label,
       priceCents: PLANS[id].priceCents,
+      compareAtCents: PLANS[id].compareAtCents,
       currency: PLAN_CURRENCY,
     })),
     countries,

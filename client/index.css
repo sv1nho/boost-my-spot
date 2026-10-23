@@ -2227,3 +2227,28 @@ h1, h2, h3 { font-family: var(--font-display); }
     .promo-form-row { grid-template-columns: 1fr; }
   }
 }
+
+@layer components {
+  .offer-pricing {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .price-compare {
+    text-decoration: line-through;
+    color: var(--color-text-subtle);
+    font-weight: 400;
+  }
+
+  .offer-badge {
+    align-self: center;
+    border-radius: var(--radius-full);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+}

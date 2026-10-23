@@ -67,6 +67,7 @@ export function Order () {
 
   const plan = catalog.plans[0]
   const countries = ['ANY', ...catalog.countries]
+  const launchOff = Math.round((1 - plan.priceCents / plan.compareAtCents) * 100)
 
   const problems: Problems = {
     email: EMAIL.test(draft.email) ? undefined : t('Enter a valid email address.'),
@@ -137,7 +138,11 @@ export function Order () {
         <section className='wizard-step space-y-4'>
           <div className='offer'>
             <span className='offer-name'>{t(plan.label)}</span>
-            <span className='offer-price'>{money(plan.priceCents)}</span>
+            <span className='offer-pricing'>
+              <span className='price-compare'>{money(plan.compareAtCents)}</span>
+              <span className='offer-price'>{money(plan.priceCents)}</span>
+              <span className='offer-badge'>−{launchOff}%</span>
+            </span>
           </div>
           <p className='card-text'>{t('A one-time upgrade of your own Spotify account to Premium, kept active with free renewals.')}</p>
           <Field label={t('Country')} htmlFor='order-country' problem={undefined} hint={t('Pick a country, or let us choose any available one.')}>
@@ -187,7 +192,7 @@ export function Order () {
         <section className='wizard-step space-y-4'>
           <h4 className='card-subtitle'>{t('Review your order')}</h4>
           <dl className='summary'>
-            <div className='summary-row'><dt>{t('Offer')}</dt><dd>{t(plan.label)} — {money(plan.priceCents)}</dd></div>
+            <div className='summary-row'><dt>{t('Offer')}</dt><dd>{t(plan.label)} — <span className='price-compare'>{money(plan.compareAtCents)}</span> {money(plan.priceCents)}</dd></div>
             {applied !== null && (
               <div className='summary-row'><dt>{t('Promo code')} · {applied.code}</dt><dd>−{money(plan.priceCents - applied.finalCents)}</dd></div>
             )}

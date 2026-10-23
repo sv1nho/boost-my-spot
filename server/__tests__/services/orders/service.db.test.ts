@@ -76,7 +76,7 @@ describe('orders service', () => {
     const order = await prisma.order.findUniqueOrThrow({ where: { id: id as string } })
     expect(order.status).toBe('awaiting_payment')
     expect(order.email).toBe('buyer@example.com')
-    expect(order.priceCents).toBe(2000)
+    expect(order.priceCents).toBe(3000)
     expect(order.paymentProvider).toBe('nowpayments')
     expect(order.paymentId).toBe('inv_1')
     expect(isOrderReference(order.reference)).toBe(true)
@@ -90,7 +90,7 @@ describe('orders service', () => {
 
     expect(invoiceCalls[0]).toMatchObject({
       reference: order.reference,
-      amountCents: 2000,
+      amountCents: 3000,
       currency: 'EUR',
       successUrl: `https://boost.test/orders/${result.token}?paid=1`,
       callbackUrl: 'https://boost.test/api/payments/nowpayments',
@@ -113,7 +113,7 @@ describe('orders service', () => {
     const orders = build({ US: 5 })
     const result = await orders.create(input({ promoCode: 'save25' }))
 
-    expect(redeem).toHaveBeenCalledWith('save25', 2000)
+    expect(redeem).toHaveBeenCalledWith('save25', 3000)
     expect(result.paymentUrl).toBe('https://pay.test/i/1')
     const order = await prisma.order.findUniqueOrThrow({ where: { id: orderLink.verify(result.token) as string } })
     expect(order.priceCents).toBe(1500)
@@ -124,7 +124,7 @@ describe('orders service', () => {
   })
 
   it('creates a free order when a promo covers the whole price', async () => {
-    redeem.mockResolvedValue({ code: 'FREE', discountCents: 2000, finalCents: 0 })
+    redeem.mockResolvedValue({ code: 'FREE', discountCents: 3000, finalCents: 0 })
     const orders = build({ US: 5 })
     const result = await orders.create(input({ promoCode: 'free' }))
 
@@ -132,7 +132,7 @@ describe('orders service', () => {
     const order = await prisma.order.findUniqueOrThrow({ where: { id: orderLink.verify(result.token) as string } })
     expect(order.status).toBe('paid')
     expect(order.priceCents).toBe(0)
-    expect(order.discountCents).toBe(2000)
+    expect(order.discountCents).toBe(3000)
     expect(order.paidAt).not.toBeNull()
     expect(invoiceCalls).toHaveLength(0)
     expect(send).toHaveBeenCalled()
@@ -186,7 +186,7 @@ describe('orders service', () => {
     const orders = build({ US: 5, DE: 0 })
     const catalog = await orders.catalog()
     expect(catalog.countries).toEqual(['US'])
-    expect(catalog.plans).toEqual([{ id: 'lifetime', label: 'Lifetime', priceCents: 2000, currency: 'EUR' }])
+    expect(catalog.plans).toEqual([{ id: 'lifetime', label: 'Lifetime', priceCents: 3000, compareAtCents: 6000, currency: 'EUR' }])
   })
 })
 
@@ -202,12 +202,12 @@ describe('orders payment webhook', () => {
     const orders = build({ US: 5 })
     const { id, reference } = await makeAwaiting(orders)
 
-    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 2000, currency: 'EUR' })
+    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 3000, currency: 'EUR' })
     const paid = await prisma.order.findUniqueOrThrow({ where: { id } })
     expect(paid.status).toBe('paid')
     expect(paid.paidAt).not.toBeNull()
 
-    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 2000, currency: 'EUR' })
+    await orders.applyPayment({ reference, status: 'paid', priceAmountCents: 3000, currency: 'EUR' })
     const again = await prisma.order.findUniqueOrThrow({ where: { id } })
     expect(again.status).toBe('paid')
     expect(await prisma.orderEvent.count({ where: { orderId: id, status: 'paid' } })).toBe(1)
@@ -239,7 +239,7 @@ describe('orders payment webhook', () => {
   it('ignores a notification for an unknown order', async () => {
     const orders = build({ US: 5 })
     await expect(
-      orders.applyPayment({ reference: 'BMS-00000000', status: 'paid', priceAmountCents: 2000, currency: 'EUR' })
+      orders.applyPayment({ reference: 'BMS-00000000', status: 'paid', priceAmountCents: 3000, currency: 'EUR' })
     ).resolves.toBeUndefined()
   })
 })

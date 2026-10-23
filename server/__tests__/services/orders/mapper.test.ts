@@ -33,7 +33,7 @@ describe('order mapper', () => {
 
   it('builds the catalog from the plans and the available countries', () => {
     const catalog = toCatalog(['US', 'GB'])
-    expect(catalog.plans).toEqual([{ id: 'lifetime', label: 'Lifetime', priceCents: 2000, currency: 'EUR' }])
+    expect(catalog.plans).toEqual([{ id: 'lifetime', label: 'Lifetime', priceCents: 3000, compareAtCents: 6000, currency: 'EUR' }])
     expect(catalog.countries).toEqual(['US', 'GB'])
   })
 })

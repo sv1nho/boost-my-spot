@@ -4,7 +4,7 @@ import { PLANS, PLAN_IDS, PLAN_CURRENCY, isPlanId } from '../plans.js'
 describe('plans', () => {
   it('offers a single lifetime plan at 20 EUR', () => {
     expect(PLAN_IDS).toEqual(['lifetime'])
-    expect(PLANS.lifetime).toEqual({ label: 'Lifetime', priceCents: 2000 })
+    expect(PLANS.lifetime).toEqual({ label: 'Lifetime', priceCents: 3000, compareAtCents: 6000 })
     expect(PLAN_CURRENCY).toBe('EUR')
   })
 

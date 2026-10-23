@@ -18,13 +18,13 @@ app.use(createErrorHandler({ exposeDetails: true, logRefusals: false }))
 describe('GET /api/catalog', () => {
   it('returns the plans and the available countries', async () => {
     catalog.mockResolvedValue({
-      plans: [{ id: 'lifetime', label: 'Lifetime', priceCents: 2000, currency: 'EUR' }],
+      plans: [{ id: 'lifetime', label: 'Lifetime', priceCents: 3000, compareAtCents: 6000, currency: 'EUR' }],
       countries: ['US', 'GB'],
     })
     const response = await request(app).get('/api/catalog')
     expect(response.status).toBe(200)
     const catalogBody = bodyOf<{ countries: string[]; plans: { priceCents: number }[] }>(response)
     expect(catalogBody.countries).toEqual(['US', 'GB'])
-    expect(catalogBody.plans[0].priceCents).toBe(2000)
+    expect(catalogBody.plans[0].priceCents).toBe(3000)
   })
 })

@@ -1,8 +1,8 @@
 export const PLAN_CURRENCY = 'EUR'
 
 export const PLANS = {
-  lifetime: { label: 'Lifetime', priceCents: 2000 },
-} as const satisfies Record<string, { label: string; priceCents: number }>
+  lifetime: { label: 'Lifetime', priceCents: 3000, compareAtCents: 6000 },
+} as const satisfies Record<string, { label: string; priceCents: number; compareAtCents: number }>
 
 export type PlanId = keyof typeof PLANS
 

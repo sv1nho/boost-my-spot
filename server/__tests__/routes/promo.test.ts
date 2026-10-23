@@ -23,7 +23,7 @@ describe('POST /api/promo', () => {
     preview.mockResolvedValue({ code: 'SAVE25', discountCents: 500, finalCents: 1500 })
     const response = await request(app).post('/api/promo').send({ code: 'save25', plan: 'lifetime' })
     expect(response.status).toBe(200)
-    expect(preview).toHaveBeenCalledWith('save25', 2000)
+    expect(preview).toHaveBeenCalledWith('save25', 3000)
     expect(bodyOf<{ finalCents: number }>(response).finalCents).toBe(1500)
   })
 

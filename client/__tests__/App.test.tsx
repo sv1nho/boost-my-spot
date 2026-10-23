@@ -5,7 +5,7 @@ import { LocaleProvider } from '../i18n/context.js'
 
 vi.mock('../api/catalog.js', () => ({
   getCatalog: () => Promise.resolve({
-    plans: [{ id: 'lifetime', label: 'Lifetime', priceCents: 2000, currency: 'EUR' }],
+    plans: [{ id: 'lifetime', label: 'Lifetime', priceCents: 3000, compareAtCents: 6000, currency: 'EUR' }],
     countries: ['US'],
   }),
 }))
