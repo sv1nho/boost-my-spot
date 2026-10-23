@@ -20,25 +20,31 @@ const catalog = {
 }
 
 const renderOrder = () => render(<LocaleProvider><Order /></LocaleProvider>)
+const continueButton = () => screen.getByRole('button', { name: 'Continue' })
 
-const fillValid = async () => {
-  await userEvent.type(screen.getByLabelText('Email'), 'buyer@example.com')
+const advanceToReview = async () => {
+  await screen.findByText('Order your upgrade')
+  await userEvent.selectOptions(screen.getByLabelText('Country'), 'US')
+  await userEvent.click(continueButton())
   await userEvent.type(screen.getByLabelText('Spotify session key'), 'AQA-cookie-value-123')
+  await userEvent.click(continueButton())
+  await userEvent.type(screen.getByLabelText('Email'), 'buyer@example.com')
   await userEvent.click(screen.getByLabelText(/accept the terms/i))
   await userEvent.click(screen.getByLabelText(/right away/i))
+  await userEvent.click(continueButton())
+  await screen.findByText('Review your order')
 }
 
-beforeEach(() => {
-  vi.clearAllMocks()
-})
+beforeEach(() => { vi.clearAllMocks() })
 
-describe('Order page', () => {
-  it('shows a loader, then the offer', async () => {
+describe('Order wizard', () => {
+  it('shows a loader, then the first step', async () => {
     getCatalogMock.mockResolvedValue(catalog)
     renderOrder()
     expect(screen.getByText('Loading the offer…')).toBeInTheDocument()
     expect(await screen.findByText('Order your upgrade')).toBeInTheDocument()
     expect(screen.getByText('€20.00')).toBeInTheDocument()
+    expect(screen.getByLabelText('Country')).toBeInTheDocument()
   })
 
   it('shows an error and recovers on retry', async () => {
@@ -56,40 +62,82 @@ describe('Order page', () => {
     expect(screen.getByText('Loading the offer…')).toBeInTheDocument()
   })
 
-  it('validates the form before submitting', async () => {
+  it('blocks each step until it is valid', async () => {
     getCatalogMock.mockResolvedValue(catalog)
     renderOrder()
     await screen.findByText('Order your upgrade')
-    await userEvent.click(screen.getByRole('button', { name: 'Pay with crypto' }))
-    expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument()
+
+    await userEvent.click(continueButton())
+    await userEvent.click(continueButton())
     expect(screen.getByText('Paste your Spotify session key.')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Spotify session key'), 'AQA-cookie-value-123')
+    await userEvent.click(continueButton())
+    await userEvent.click(continueButton())
+    expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument()
     expect(screen.getByText('Please accept the terms to continue.')).toBeInTheDocument()
-    expect(createOrderMock).not.toHaveBeenCalled()
+    expect(screen.getByText('Please confirm you want your upgrade right away.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByLabelText('Spotify session key')).toBeInTheDocument()
   })
 
-  it('creates the order and redirects to the payment page', async () => {
+  it('opens and closes the session-key guide', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    renderOrder()
+    await screen.findByText('Order your upgrade')
+    await userEvent.click(continueButton())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Where do I find it?' }))
+    expect(screen.getByText('Where to find your session key')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByText('Where to find your session key')).not.toBeInTheDocument()
+  })
+
+  it('reveals and hides the session key', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    renderOrder()
+    await screen.findByText('Order your upgrade')
+    await userEvent.click(continueButton())
+    const input = screen.getByLabelText('Spotify session key')
+    expect(input).toHaveAttribute('type', 'password')
+    await userEvent.click(screen.getByRole('button', { name: 'Show' }))
+    expect(input).toHaveAttribute('type', 'text')
+    await userEvent.click(screen.getByRole('button', { name: 'Hide' }))
+    expect(input).toHaveAttribute('type', 'password')
+  })
+
+  it('reviews the order and pays', async () => {
     getCatalogMock.mockResolvedValue(catalog)
     createOrderMock.mockResolvedValue({ token: 'tok', paymentUrl: 'https://pay.test/1' })
     const assign = vi.fn()
     Object.defineProperty(window, 'location', { configurable: true, value: { assign } })
     renderOrder()
-    await screen.findByText('Order your upgrade')
-    await userEvent.selectOptions(screen.getByLabelText('Country'), 'US')
-    await fillValid()
-    await userEvent.click(screen.getByRole('button', { name: 'Pay with crypto' }))
+    await advanceToReview()
+
+    expect(screen.getByText('buyer@example.com')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
     expect(createOrderMock).toHaveBeenCalledWith({
       plan: 'lifetime', country: 'US', email: 'buyer@example.com', spDc: 'AQA-cookie-value-123', locale: 'en',
     })
     await waitFor(() => { expect(assign).toHaveBeenCalledWith('https://pay.test/1') })
   })
 
+  it('disables the pay button while submitting', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    createOrderMock.mockReturnValue(new Promise(() => {}))
+    renderOrder()
+    await advanceToReview()
+    await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
+    expect(screen.getByRole('button', { name: 'Starting…' })).toBeDisabled()
+  })
+
   it('shows a service refusal', async () => {
     getCatalogMock.mockResolvedValue(catalog)
     createOrderMock.mockRejectedValue(new ApiError(409, 'CONFLICT', 'That country is out of stock right now.', null))
     renderOrder()
-    await screen.findByText('Order your upgrade')
-    await fillValid()
-    await userEvent.click(screen.getByRole('button', { name: 'Pay with crypto' }))
+    await advanceToReview()
+    await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
     expect(await screen.findByText('That country is out of stock right now.')).toBeInTheDocument()
   })
 
@@ -97,21 +145,8 @@ describe('Order page', () => {
     getCatalogMock.mockResolvedValue(catalog)
     createOrderMock.mockRejectedValue(new Error('offline'))
     renderOrder()
-    await screen.findByText('Order your upgrade')
-    await fillValid()
-    await userEvent.click(screen.getByRole('button', { name: 'Pay with crypto' }))
+    await advanceToReview()
+    await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
     expect(await screen.findByText(/could not be reached/i)).toBeInTheDocument()
-  })
-
-  it('reveals and hides the session key', async () => {
-    getCatalogMock.mockResolvedValue(catalog)
-    renderOrder()
-    await screen.findByText('Order your upgrade')
-    const input = screen.getByLabelText('Spotify session key')
-    expect(input).toHaveAttribute('type', 'password')
-    await userEvent.click(screen.getByRole('button', { name: 'Show' }))
-    expect(input).toHaveAttribute('type', 'text')
-    await userEvent.click(screen.getByRole('button', { name: 'Hide' }))
-    expect(input).toHaveAttribute('type', 'password')
   })
 })

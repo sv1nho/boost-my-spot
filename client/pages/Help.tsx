@@ -1,20 +1,20 @@
+import { useState } from 'react'
+import { SpotifyKeyGuide } from '../orders/SpotifyKeyGuide.js'
 import { useLocale } from '../i18n/context.js'
 
-function HelpEn () {
+function HelpEn ({ onGuide }: { onGuide: () => void }) {
   return (
     <>
       <h3 className='card-title'>Help &amp; FAQ</h3>
 
-      <h4 className='card-title'>Finding your Spotify session key (sp_dc)</h4>
-      <p className='card-text'>You need a computer with a desktop browser. On a phone this is much harder.</p>
-      <ol className='guide-list'>
-        <li>Open <strong>open.spotify.com</strong> in your browser and sign in.</li>
-        <li>Open the developer tools (F12), then the <strong>Application</strong> tab.</li>
-        <li>Under <strong>Cookies → https://open.spotify.com</strong>, find the row named <strong>sp_dc</strong>.</li>
-        <li>Copy its value and paste it into the order form. We never ask for your password.</li>
-      </ol>
+      <h4 className='card-subtitle'>Finding your Spotify session key (sp_dc)</h4>
+      <p className='card-text'>
+        You paste one value from your Spotify account — we never ask for your password. A short
+        illustrated guide walks you through it in about a minute, on a computer.
+      </p>
+      <button type='button' className='btn btn-ghost btn-compact' onClick={onGuide}>Open the guide</button>
 
-      <h4 className='card-title'>Common questions</h4>
+      <h4 className='card-subtitle'>Common questions</h4>
       <dl className='faq'>
         <dt>Is this official?</dt>
         <dd>No. We are not affiliated with Spotify AB. We upgrade an account you already own.</dd>
@@ -27,21 +27,19 @@ function HelpEn () {
   )
 }
 
-function HelpFr () {
+function HelpFr ({ onGuide }: { onGuide: () => void }) {
   return (
     <>
       <h3 className='card-title'>Aide et FAQ</h3>
 
-      <h4 className='card-title'>Trouver votre clé de session Spotify (sp_dc)</h4>
-      <p className='card-text'>Il vous faut un ordinateur avec un navigateur de bureau. Sur téléphone, c’est bien plus difficile.</p>
-      <ol className='guide-list'>
-        <li>Ouvrez <strong>open.spotify.com</strong> dans votre navigateur et connectez-vous.</li>
-        <li>Ouvrez les outils de développement (F12), puis l’onglet <strong>Application</strong>.</li>
-        <li>Dans <strong>Cookies → https://open.spotify.com</strong>, trouvez la ligne <strong>sp_dc</strong>.</li>
-        <li>Copiez sa valeur et collez-la dans le formulaire. Nous ne demandons jamais votre mot de passe.</li>
-      </ol>
+      <h4 className='card-subtitle'>Trouver votre clé de session Spotify (sp_dc)</h4>
+      <p className='card-text'>
+        Vous collez une seule valeur depuis votre compte Spotify — nous ne demandons jamais votre
+        mot de passe. Un guide illustré vous accompagne en une minute, sur un ordinateur.
+      </p>
+      <button type='button' className='btn btn-ghost btn-compact' onClick={onGuide}>Ouvrir le guide</button>
 
-      <h4 className='card-title'>Questions fréquentes</h4>
+      <h4 className='card-subtitle'>Questions fréquentes</h4>
       <dl className='faq'>
         <dt>Est-ce officiel ?</dt>
         <dd>Non. Nous ne sommes pas affiliés à Spotify AB. Nous améliorons un compte qui est déjà le vôtre.</dd>
@@ -56,5 +54,13 @@ function HelpFr () {
 
 export function Help () {
   const { locale } = useLocale()
-  return <div className='card legal space-y-4'>{locale === 'fr' ? <HelpFr /> : <HelpEn />}</div>
+  const [guide, setGuide] = useState(false)
+  const openGuide = (): void => { setGuide(true) }
+
+  return (
+    <div className='card legal space-y-4'>
+      {locale === 'fr' ? <HelpFr onGuide={openGuide} /> : <HelpEn onGuide={openGuide} />}
+      {guide && <SpotifyKeyGuide onClose={() => { setGuide(false) }} />}
+    </div>
+  )
 }

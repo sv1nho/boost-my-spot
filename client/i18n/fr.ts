@@ -139,4 +139,28 @@ export const FRENCH: Record<string, string> = {
 
   'Cancel': 'Annuler',
   'Working…': 'En cours…',
+
+  'Order steps': 'Étapes de la commande',
+  'Offer': 'Offre',
+  'Details': 'Coordonnées',
+  'Payment': 'Paiement',
+  'Back': 'Retour',
+  'Continue': 'Continuer',
+  'Pay securely': 'Payer en sécurité',
+  'Review your order': 'Vérifiez votre commande',
+  'Provided': 'Fournie',
+  'A one-time upgrade of your own Spotify account to Premium, kept active with free renewals.': 'Un upgrade unique de votre propre compte Spotify en Premium, maintenu actif par des renouvellements gratuits.',
+  'Paste your Spotify session key (the sp_dc cookie). We never ask for your password, we encrypt it, and we delete it once your upgrade is done.': 'Collez la clé de session de votre compte Spotify (le cookie sp_dc). Nous ne demandons jamais votre mot de passe, nous la chiffrons, et nous la supprimons une fois l’upgrade terminé.',
+  'Where do I find it?': 'Où la trouver ?',
+  'You will be sent to a secure payment page to finish.': 'Vous serez redirigé vers une page de paiement sécurisée pour finaliser.',
+
+  'Where to find your session key': 'Où trouver votre clé de session',
+  'Close': 'Fermer',
+  'You need a computer with a desktop browser — on a phone it is much harder. It takes about a minute.': 'Il vous faut un ordinateur avec un navigateur de bureau — sur téléphone c’est bien plus difficile. Cela prend environ une minute.',
+  'Screenshot {n}': 'Capture {n}',
+  'Open open.spotify.com in your browser and sign in to your account.': 'Ouvrez open.spotify.com dans votre navigateur et connectez-vous à votre compte.',
+  'Open your browser developer tools (press F12), then the Application tab.': 'Ouvrez les outils de développement du navigateur (touche F12), puis l’onglet Application.',
+  'In the left menu, open Cookies → https://open.spotify.com.': 'Dans le menu de gauche, ouvrez Cookies → https://open.spotify.com.',
+  'Find the row named sp_dc, copy its value, and paste it here. We never ask for your password.': 'Trouvez la ligne nommée sp_dc, copiez sa valeur et collez-la ici. Nous ne demandons jamais votre mot de passe.',
+  'Got it': 'J’ai compris',
 }

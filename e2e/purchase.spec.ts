@@ -14,11 +14,14 @@ test('a guest orders an upgrade and watches it go active', async ({ page, reques
   await page.getByRole('heading', { name: 'Order your upgrade' }).waitFor()
 
   await page.getByLabel('Country').selectOption('US')
+  await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByLabel('Spotify session key').fill('valid-session-cookie')
+  await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByLabel('Email').fill(email)
   await page.getByRole('checkbox', { name: 'I accept the terms of service.' }).check()
   await page.getByRole('checkbox', { name: 'I want my upgrade right away and waive my 14-day right of withdrawal.' }).check()
-  await page.getByRole('button', { name: 'Pay with crypto' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Pay securely' }).click()
 
   await expect(page.locator('.status-pill')).toHaveText('Premium active', { timeout: 30_000 })
 

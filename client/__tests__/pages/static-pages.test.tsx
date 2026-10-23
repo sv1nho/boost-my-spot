@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { LocaleProvider } from '../../i18n/context.js'
 import { Help } from '../../pages/Help.js'
 import { Terms } from '../../pages/Terms.js'
@@ -21,6 +22,14 @@ describe('static pages', () => {
     expect(en.getByText('Help & FAQ')).toBeInTheDocument()
     en.unmount()
     expect(renderIn('fr', <Help />).getByText('Aide et FAQ')).toBeInTheDocument()
+  })
+
+  it('opens and closes the session-key guide from Help', async () => {
+    renderIn('en', <Help />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open the guide' }))
+    expect(screen.getByText('Where to find your session key')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByText('Where to find your session key')).not.toBeInTheDocument()
   })
 
   it('shows the Terms in both languages', () => {

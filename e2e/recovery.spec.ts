@@ -5,11 +5,14 @@ const order = async (page: Page, spDc: string, email: string): Promise<void> => 
   await page.goto('/order')
   await page.getByRole('heading', { name: 'Order your upgrade' }).waitFor()
   await page.getByLabel('Country').selectOption('US')
+  await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByLabel('Spotify session key').fill(spDc)
+  await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByLabel('Email').fill(email)
   await page.getByRole('checkbox', { name: 'I accept the terms of service.' }).check()
   await page.getByRole('checkbox', { name: 'I want my upgrade right away and waive my 14-day right of withdrawal.' }).check()
-  await page.getByRole('button', { name: 'Pay with crypto' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Pay securely' }).click()
 }
 
 test('a rejected cookie can be replaced from the tracking page', async ({ page, request }) => {

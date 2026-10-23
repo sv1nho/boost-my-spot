@@ -22,13 +22,11 @@ test.describe('what the forms do with hostile text', () => {
       page.on('pageerror', (error) => broken.push(error.message))
 
       await page.goto('/order')
+      await page.getByRole('button', { name: 'Continue' }).click()
       await page.getByLabel('Spotify session key').fill(text)
-      await page.getByLabel('Email').fill(text)
-      await page.getByRole('checkbox', { name: 'I accept the terms of service.' }).check()
-      await page.getByRole('checkbox', { name: 'I want my upgrade right away and waive my 14-day right of withdrawal.' }).check()
-      await page.getByRole('button', { name: 'Pay with crypto' }).click()
+      await page.getByRole('button', { name: 'Continue' }).click()
 
-      await expect(page.getByRole('button', { name: 'Pay with crypto' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Order your upgrade' })).toBeVisible()
       expect(broken).toEqual([])
     })
 
