@@ -10,7 +10,7 @@ React + Vite on the front, Express + Prisma + PostgreSQL on the back.
 ## What it does
 
 A visitor picks a plan and a country, pastes their Spotify session key (we never
-ask for a password), pays in crypto, and gets an order reference. A background
+ask for a password), pays by card or Apple Pay, and gets an order reference. A background
 worker runs the upgrade through the reseller API and moves the order through
 `awaiting_payment → paid → upgrading → active`. The visitor follows it on a
 tracking page that refreshes itself, and gets the same by email. If the session
@@ -109,7 +109,7 @@ in `shared/transitions.ts` and enforced on every write with a conditional
 
 ```
 awaiting_payment → paid | expired | underpaid
-expired          → paid                       (a late crypto payment)
+expired          → paid                       (a late payment)
 underpaid        → paid (admin) | refunded
 paid             → upgrading | needs_action | failed
 upgrading        → active | needs_action | failed | paid (retry)
@@ -139,16 +139,22 @@ with Zod and failures are classified — `cookie_rejected`, `out_of_stock`,
 `rate_limited`, `transient`, `rejected` — so an unknown shape fails cleanly instead
 of producing a false state. A 429 is honoured by its `retry_after`.
 
-Payments go through NOWPayments in v1, behind a `PaymentProvider` seam so a card
-provider can be added later. The IPN webhook is mounted before the JSON body
-parser and read raw: its HMAC-SHA512 signature is checked over the JSON with keys
-sorted deeply, and the amount and currency are matched against the order before it
-is marked paid. The handler is idempotent, so a replayed notification changes
-nothing.
+Payments go through NOWPayments, behind a `PaymentProvider` seam. The customer
+pays **by card, Apple Pay or Google Pay** on NOWPayments' hosted page — its fiat
+on-ramp (Banxa/Guardarian) takes the card and settles to the merchant in crypto,
+so the card-processing risk sits with the regulated on-ramp partner rather than a
+merchant account of ours. The invoice is created in EUR with a fiat `pay_currency`
+to route to the on-ramp; everything else (the redirect and the IPN) is unchanged.
+The IPN webhook is mounted before the JSON body parser and read raw: its
+HMAC-SHA512 signature is checked over the JSON with keys sorted deeply, and the
+amount and currency are matched against the order before it is marked paid. The
+handler is idempotent, so a replayed notification changes nothing.
 
-Crypto is the only method in v1 on purpose: a card processor's terms forbid the
-"unauthorised sale of branded goods" and the "resale of a service without added
-value", which this would fall under.
+Going live with cards needs the on-ramp enabled in the NOWPayments dashboard (a
+KYB step), after which no code change is required. A direct card processor (Stripe
+and the like) is avoided on purpose: their terms forbid the "unauthorised sale of
+branded goods" and the "resale of a service without added value", which this would
+fall under, and they tend to freeze such accounts.
 
 ## Back-office
 

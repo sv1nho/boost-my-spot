@@ -4,7 +4,7 @@ import { useT } from '../i18n/context.js'
 const STEPS = [
   { title: 'Pick a plan', text: 'Choose how long you want Premium and which country.' },
   { title: 'Connect your account', text: 'Paste your Spotify session key. We never ask for your password.' },
-  { title: 'Enjoy Premium', text: 'Pay in crypto and follow your upgrade live on the tracking page.' },
+  { title: 'Enjoy Premium', text: 'Pay by card or Apple Pay, and follow your upgrade live on the tracking page.' },
 ]
 
 export function Home () {

@@ -36,6 +36,7 @@ export const payments = createNowPayments({
   baseUrl: required('NOWPAYMENTS_API_URL', env.NOWPAYMENTS_API_URL),
   apiKey: required('NOWPAYMENTS_API_KEY', env.NOWPAYMENTS_API_KEY),
   ipnSecret: required('NOWPAYMENTS_IPN_SECRET', env.NOWPAYMENTS_IPN_SECRET),
+  payCurrency: 'eur',
 })
 
 export const promos = createPromos({ now: () => new Date() })

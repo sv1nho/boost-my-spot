@@ -20,13 +20,13 @@ export const orderReceivedEmail = (c: EmailContext): Mail =>
     ? {
         to: c.email,
         subject: `Commande reçue — ${c.reference}`,
-        html: shell('Commande reçue', `Merci ! Nous avons bien reçu la commande ${c.reference}. Dès que votre paiement crypto est confirmé, nous lançons l’upgrade — suivez-la ici.`, 'Suivre ma commande', c.trackingLink),
+        html: shell('Commande reçue', `Merci ! Nous avons bien reçu la commande ${c.reference}. Dès que votre paiement est confirmé, nous lançons l’upgrade — suivez-la ici.`, 'Suivre ma commande', c.trackingLink),
         text: `Commande ${c.reference} reçue. Suivez-la : ${c.trackingLink}`,
       }
     : {
         to: c.email,
         subject: `Order received — ${c.reference}`,
-        html: shell('Order received', `Thanks! We received order ${c.reference}. As soon as your crypto payment is confirmed we start the upgrade — follow it here.`, 'Track my order', c.trackingLink),
+        html: shell('Order received', `Thanks! We received order ${c.reference}. As soon as your payment is confirmed we start the upgrade — follow it here.`, 'Track my order', c.trackingLink),
         text: `Order ${c.reference} received. Track it: ${c.trackingLink}`,
       }
 

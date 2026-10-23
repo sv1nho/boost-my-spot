@@ -31,7 +31,7 @@ const makeFetch = (payload: unknown, status = 200) => {
 const provider = (payload: unknown, status = 200) => {
   const { fn, calls } = makeFetch(payload, status)
   return {
-    client: createNowPayments({ fetch: fn, baseUrl: 'https://np.test/v1', apiKey: 'k', ipnSecret: SECRET }),
+    client: createNowPayments({ fetch: fn, baseUrl: 'https://np.test/v1', apiKey: 'k', ipnSecret: SECRET, payCurrency: 'eur' }),
     calls,
   }
 }
@@ -46,7 +46,7 @@ describe('nowpayments adapter', () => {
     expect(invoice).toEqual({ id: '4242', url: 'https://pay.test/i/1' })
     expect(calls[0].url).toBe('https://np.test/v1/invoice')
     expect(JSON.parse(calls[0].init.body as string)).toMatchObject({
-      price_amount: 20, price_currency: 'eur', order_id: 'BMS-0000ABCD',
+      price_amount: 20, price_currency: 'eur', pay_currency: 'eur', order_id: 'BMS-0000ABCD',
     })
   })
 

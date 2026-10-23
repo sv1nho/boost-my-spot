@@ -7,6 +7,7 @@ type Deps = {
   baseUrl: string
   apiKey: string
   ipnSecret: string
+  payCurrency: string
   timeoutMs?: number
 }
 
@@ -44,7 +45,7 @@ const sortDeep = (value: unknown): unknown => {
   return value
 }
 
-export function createNowPayments ({ fetch, baseUrl, apiKey, ipnSecret, timeoutMs = DEFAULT_TIMEOUT }: Deps): PaymentProvider {
+export function createNowPayments ({ fetch, baseUrl, apiKey, ipnSecret, payCurrency, timeoutMs = DEFAULT_TIMEOUT }: Deps): PaymentProvider {
   return {
     createInvoice: async ({ reference, amountCents, currency, successUrl, callbackUrl }) => {
       const response = await fetch(`${baseUrl}/invoice`, {
@@ -54,6 +55,7 @@ export function createNowPayments ({ fetch, baseUrl, apiKey, ipnSecret, timeoutM
         body: JSON.stringify({
           price_amount: amountCents / 100,
           price_currency: currency.toLowerCase(),
+          pay_currency: payCurrency,
           order_id: reference,
           success_url: successUrl,
           ipn_callback_url: callbackUrl,

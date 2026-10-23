@@ -20,8 +20,8 @@ export const FRENCH: Record<string, string> = {
   'Paste your Spotify session key. We never ask for your password.':
     'Collez la clé de session de votre compte Spotify. Nous ne demandons jamais votre mot de passe.',
   'Enjoy Premium': 'Profitez du Premium',
-  'Pay in crypto and follow your upgrade live on the tracking page.':
-    'Payez en crypto et suivez votre passage en Premium en direct sur la page de suivi.',
+  'Pay by card or Apple Pay, and follow your upgrade live on the tracking page.':
+    'Payez par carte ou Apple Pay, et suivez votre passage en Premium en direct sur la page de suivi.',
 
   'Order an upgrade': 'Commander un upgrade',
   'The order form is on its way.': 'Le formulaire de commande arrive bientôt.',
@@ -48,7 +48,6 @@ export const FRENCH: Record<string, string> = {
   'Please confirm you want your upgrade right away.': 'Veuillez confirmer que vous voulez votre upgrade immédiatement.',
   'I accept the terms of service.': 'J’accepte les conditions d’utilisation.',
   'I want my upgrade right away and waive my 14-day right of withdrawal.': 'Je veux mon upgrade immédiatement et je renonce à mon droit de rétractation de 14 jours.',
-  'Pay with crypto': 'Payer en crypto',
   'Starting…': 'Démarrage…',
   'Your order': 'Votre commande',
   'Loading your order…': 'Chargement de votre commande…',
