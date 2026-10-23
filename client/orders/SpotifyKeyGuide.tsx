@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useT } from '../i18n/context.js'
 
 const STEPS = [
@@ -10,7 +11,7 @@ const STEPS = [
 export function SpotifyKeyGuide ({ onClose }: { onClose: () => void }) {
   const t = useT()
 
-  return (
+  return createPortal(
     <div className='dialog-overlay' role='dialog' aria-modal='true' aria-label={t('Where to find your session key')}>
       <div className='dialog-card guide-card'>
         <div className='guide-head'>
@@ -38,6 +39,7 @@ export function SpotifyKeyGuide ({ onClose }: { onClose: () => void }) {
 
         <button type='button' className='btn btn-primary' onClick={onClose}>{t('Got it')}</button>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useT } from '../i18n/context.js'
 
 type ConfirmDialogProps = {
@@ -12,7 +13,7 @@ type ConfirmDialogProps = {
 export function ConfirmDialog ({ title, body, confirmLabel, pending, onConfirm, onCancel }: ConfirmDialogProps) {
   const t = useT()
 
-  return (
+  return createPortal(
     <div className='dialog-overlay' role='dialog' aria-modal='true' aria-label={title}>
       <div className='dialog-card'>
         <h3 className='dialog-title'>{title}</h3>
@@ -26,6 +27,7 @@ export function ConfirmDialog ({ title, body, confirmLabel, pending, onConfirm, 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
