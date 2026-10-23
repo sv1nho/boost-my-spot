@@ -34,6 +34,10 @@ test('the admin orders and keys pages meet them', async ({ page }) => {
   await page.goto('/admin/keys')
   await page.getByRole('table').waitFor()
   expect(await audit(page)).toEqual([])
+
+  await page.goto('/admin/promos')
+  await page.getByRole('button', { name: 'Create a promo code' }).waitFor()
+  expect(await audit(page)).toEqual([])
 })
 
 test('the sign-in page meets them', async ({ browser }) => {

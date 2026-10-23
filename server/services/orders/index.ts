@@ -11,6 +11,7 @@ import type { SecretBox } from '../secret-box.js'
 import type { OrderLink } from '../order-link.js'
 import type { Upgrader } from '../upgrader.js'
 import type { Mailer } from '../mail.js'
+import type { Promos } from '../promo/index.js'
 import type { PaymentNotification, PaymentProvider } from '../payments/provider.js'
 
 type Deps = {
@@ -19,6 +20,7 @@ type Deps = {
   upgrader: Upgrader
   payments: PaymentProvider
   mailer: Mailer
+  promos: Promos
   now: () => Date
   config: { paymentWindowMinutes: number; publicUrl: string }
 }
@@ -43,7 +45,7 @@ const availableCountries = (stock: Record<string, number>): string[] =>
     .filter(([, count]) => count > 0)
     .map(([code]) => code)
 
-export function createOrders ({ secretBox, orderLink, upgrader, payments, mailer, now, config }: Deps): Orders {
+export function createOrders ({ secretBox, orderLink, upgrader, payments, mailer, promos, now, config }: Deps): Orders {
   const hasStock = (stock: Record<string, number>, country: string): boolean =>
     country === 'ANY' ? Object.values(stock).some((count) => count > 0) : (stock[country] ?? 0) > 0
 
@@ -70,28 +72,38 @@ export function createOrders ({ secretBox, orderLink, upgrader, payments, mailer
       throw new AppError('CONFLICT', 'That country is out of stock right now.')
     }
 
-    const priceCents = PLANS[input.plan].priceCents
+    const listPrice = PLANS[input.plan].priceCents
+    const redemption = input.promoCode === undefined
+      ? { code: null, discountCents: 0, finalCents: listPrice }
+      : await promos.redeem(input.promoCode, listPrice)
+
+    const free = redemption.finalCents === 0
     const sealed = secretBox.seal(input.spDc)
-    const expiresAt = new Date(now().getTime() + config.paymentWindowMinutes * 60_000)
+
+    const baseData = {
+      email: input.email.toLowerCase(),
+      locale: input.locale,
+      plan: input.plan,
+      country: input.country,
+      priceCents: redemption.finalCents,
+      discountCents: redemption.discountCents,
+      promoCode: redemption.code,
+      currency: PLAN_CURRENCY,
+      spDcSealed: new Uint8Array(sealed),
+    }
+
+    const statusData = free
+      ? { status: 'paid', paidAt: now(), events: { create: { status: 'paid', actor: 'system', note: 'Free order (promo)' } } }
+      : {
+          status: 'awaiting_payment',
+          expiresAt: new Date(now().getTime() + config.paymentWindowMinutes * 60_000),
+          events: { create: { status: 'awaiting_payment', actor: 'system', note: 'Order created' } },
+        }
 
     let order
     for (let attempt = 1; ; attempt += 1) {
       try {
-        order = await prisma.order.create({
-          data: {
-            reference: generateReference(),
-            email: input.email.toLowerCase(),
-            locale: input.locale,
-            plan: input.plan,
-            country: input.country,
-            priceCents,
-            currency: PLAN_CURRENCY,
-            status: 'awaiting_payment',
-            spDcSealed: new Uint8Array(sealed),
-            expiresAt,
-            events: { create: { status: 'awaiting_payment', actor: 'system', note: 'Order created' } },
-          },
-        })
+        order = await prisma.order.create({ data: { reference: generateReference(), ...baseData, ...statusData } })
         break
       } catch (cause) {
         if (isUniqueViolation(cause) && attempt < MAX_REFERENCE_TRIES) continue
@@ -100,9 +112,15 @@ export function createOrders ({ secretBox, orderLink, upgrader, payments, mailer
     }
 
     const token = orderLink.sign(order.id)
+
+    if (free) {
+      await sendReceipt(order.email, order.reference, token, order.locale)
+      return { token, paymentUrl: null }
+    }
+
     const invoice = await payments.createInvoice({
       reference: order.reference,
-      amountCents: priceCents,
+      amountCents: redemption.finalCents,
       currency: PLAN_CURRENCY,
       successUrl: `${config.publicUrl}/orders/${token}?paid=1`,
       callbackUrl: `${config.publicUrl}/api/payments/nowpayments`,

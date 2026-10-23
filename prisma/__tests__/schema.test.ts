@@ -32,6 +32,7 @@ const makeOrder = (overrides: Record<string, unknown> = {}) =>
 afterEach(async () => {
   await prisma.upgradeKey.deleteMany()
   await prisma.order.deleteMany()
+  await prisma.promoCode.deleteMany()
 })
 
 afterAll(async () => {
@@ -134,5 +135,22 @@ describe('upgrade keys constraints', () => {
     await prisma.order.delete({ where: { id: order.id } })
     const after = await prisma.upgradeKey.findUniqueOrThrow({ where: { id: key.id } })
     expect(after.orderId).toBeNull()
+  })
+})
+
+describe('promo code constraints', () => {
+  it('accepts a valid percentage and a valid amount', async () => {
+    await expect(prisma.promoCode.create({ data: { code: 'SAVE25', kind: 'percent', value: 25 } })).resolves.toBeTruthy()
+    await expect(prisma.promoCode.create({ data: { code: 'OFF5', kind: 'amount', value: 500 } })).resolves.toBeTruthy()
+  })
+
+  it('rejects a percentage outside 1..100', async () => {
+    await expect(prisma.promoCode.create({ data: { code: 'TOOBIG', kind: 'percent', value: 150 } })).rejects.toThrow()
+  })
+
+  it('rejects an unknown kind and a duplicate code', async () => {
+    await expect(prisma.promoCode.create({ data: { code: 'BOGUS', kind: 'free', value: 1 } })).rejects.toThrow()
+    await prisma.promoCode.create({ data: { code: 'UNIQUE', kind: 'amount', value: 500 } })
+    await expect(prisma.promoCode.create({ data: { code: 'UNIQUE', kind: 'amount', value: 100 } })).rejects.toThrow()
   })
 })

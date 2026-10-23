@@ -78,7 +78,9 @@ model Order {
   locale     String @default("en")
   plan       String @default("lifetime")
   country    String
-  priceCents Int    @map("price_cents")
+  priceCents    Int     @map("price_cents")
+  discountCents Int     @default(0) @map("discount_cents")
+  promoCode     String? @map("promo_code")
   currency   String @default("EUR")
   status     String @default("awaiting_payment")
 
@@ -136,4 +138,18 @@ model UpgradeKey {
 
   @@index([plan, orderId])
   @@map("upgrade_keys")
+}
+
+model PromoCode {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String    @unique
+  kind           String
+  value          Int
+  active         Boolean   @default(true)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz
+  maxRedemptions Int?      @map("max_redemptions")
+  redemptions    Int       @default(0)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("promo_codes")
 }

@@ -26,7 +26,7 @@ const database = new Client({ connectionString: e2eDatabaseUrl() })
 
 await database.connect()
 try {
-  await database.query('TRUNCATE orders, order_events, upgrade_keys, session, account, verification, "user" CASCADE')
+  await database.query('TRUNCATE orders, order_events, upgrade_keys, promo_codes, session, account, verification, "user" CASCADE')
 } finally {
   await database.end()
 }

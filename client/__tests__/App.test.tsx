@@ -30,6 +30,9 @@ vi.mock('../api/admin.js', () => ({
   getKeyStats: () => Promise.resolve({ keys: [] }),
   runAdminAction: vi.fn(),
   importKeys: vi.fn(),
+  listPromos: () => Promise.resolve({ promos: [] }),
+  createPromo: vi.fn(),
+  setPromoActive: vi.fn(),
 }))
 vi.mock('../orders/useOrderPolling.js', () => ({
   useOrderPolling: () => ({
@@ -84,6 +87,7 @@ describe('back-office routes', () => {
     ['/admin', 'No orders match this filter yet.'],
     ['/admin/orders/BMS-0000ABCD', 'BMS-0000ABCD'],
     ['/admin/keys', 'Upgrade keys'],
+    ['/admin/promos', 'No promo codes yet.'],
   ])('loads %s when signed in', async (path, text) => {
     session = { data: { user: { email: 'a@b.test' } }, isPending: false }
     renderAt(path)

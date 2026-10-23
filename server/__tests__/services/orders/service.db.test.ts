@@ -21,6 +21,10 @@ const payments = {
 }
 
 const send = vi.fn<(mail: { subject: string; to: string }) => Promise<void>>()
+const redeem = vi.fn<(code: string, priceCents: number) => Promise<{ code: string; discountCents: number; finalCents: number }>>()
+
+const unused = () => Promise.reject(new Error('unused'))
+const promos = { preview: unused, redeem: (code: string, price: number) => redeem(code, price), list: unused, create: unused, setActive: unused }
 
 const build = (stock: Record<string, number>) =>
   createOrders({
@@ -34,6 +38,7 @@ const build = (stock: Record<string, number>) =>
     },
     payments,
     mailer: { send: (mail) => send(mail) },
+    promos,
     now: () => NOW,
     config: { paymentWindowMinutes: 30, publicUrl: 'https://boost.test' },
   })
@@ -101,6 +106,36 @@ describe('orders service', () => {
     const orders = build({ US: 5 })
     await expect(orders.create(input())).resolves.toMatchObject({ paymentUrl: 'https://pay.test/i/1' })
     expect(await prisma.order.count()).toBe(1)
+  })
+
+  it('applies a promo discount and charges the reduced amount', async () => {
+    redeem.mockResolvedValue({ code: 'SAVE25', discountCents: 500, finalCents: 1500 })
+    const orders = build({ US: 5 })
+    const result = await orders.create(input({ promoCode: 'save25' }))
+
+    expect(redeem).toHaveBeenCalledWith('save25', 2000)
+    expect(result.paymentUrl).toBe('https://pay.test/i/1')
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderLink.verify(result.token) as string } })
+    expect(order.priceCents).toBe(1500)
+    expect(order.discountCents).toBe(500)
+    expect(order.promoCode).toBe('SAVE25')
+    expect(order.status).toBe('awaiting_payment')
+    expect(invoiceCalls[0]).toMatchObject({ amountCents: 1500 })
+  })
+
+  it('creates a free order when a promo covers the whole price', async () => {
+    redeem.mockResolvedValue({ code: 'FREE', discountCents: 2000, finalCents: 0 })
+    const orders = build({ US: 5 })
+    const result = await orders.create(input({ promoCode: 'free' }))
+
+    expect(result.paymentUrl).toBeNull()
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderLink.verify(result.token) as string } })
+    expect(order.status).toBe('paid')
+    expect(order.priceCents).toBe(0)
+    expect(order.discountCents).toBe(2000)
+    expect(order.paidAt).not.toBeNull()
+    expect(invoiceCalls).toHaveLength(0)
+    expect(send).toHaveBeenCalled()
   })
 
   it('refuses to sell a country with no stock', async () => {

@@ -13,7 +13,8 @@ import { createCatalogRouter } from './routes/catalog.js'
 import { createOrdersRouter } from './routes/orders.js'
 import { createPaymentsRouter } from './routes/payments.js'
 import { createAdminRouter } from './routes/admin.js'
-import { admin, orders, payments } from './deps.js'
+import { createPromoRouter } from './routes/promo.js'
+import { admin, orders, payments, promos } from './deps.js'
 import { prisma } from './prisma.js'
 import { env, isDevelopment, isProduction } from './env.js'
 
@@ -56,7 +57,8 @@ export function createApp (): Express {
 
   app.use('/api/catalog', createCatalogRouter(orders))
   app.use('/api/orders', createOrdersRouter(orders))
-  app.use('/api/admin', createAdminRouter(admin))
+  app.use('/api/promo', createPromoRouter(promos))
+  app.use('/api/admin', createAdminRouter(admin, promos))
 
   app.use(createWebAppFallback(WEB_APP_ROOT))
 

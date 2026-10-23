@@ -1,25 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { LocaleProvider } from '../../i18n/context.js'
 import { ApiError } from '../../api/client.js'
 import { Order } from '../../pages/Order.js'
 
 vi.mock('../../api/catalog.js', () => ({ getCatalog: vi.fn() }))
 vi.mock('../../api/orders.js', () => ({ createOrder: vi.fn() }))
+vi.mock('../../api/promo.js', () => ({ previewPromo: vi.fn() }))
 
 import { getCatalog } from '../../api/catalog.js'
 import { createOrder } from '../../api/orders.js'
+import { previewPromo } from '../../api/promo.js'
 
 const getCatalogMock = vi.mocked(getCatalog)
 const createOrderMock = vi.mocked(createOrder)
+const previewPromoMock = vi.mocked(previewPromo)
 
 const catalog = {
   plans: [{ id: 'lifetime' as const, label: 'Lifetime', priceCents: 2000, currency: 'EUR' }],
   countries: ['US', 'GB'],
 }
 
-const renderOrder = () => render(<LocaleProvider><Order /></LocaleProvider>)
+const renderOrder = () => render(
+  <LocaleProvider>
+    <MemoryRouter initialEntries={['/order']}>
+      <Routes>
+        <Route path='/order' element={<Order />} />
+        <Route path='/orders/:token' element={<div>tracking page</div>} />
+      </Routes>
+    </MemoryRouter>
+  </LocaleProvider>
+)
 const continueButton = () => screen.getByRole('button', { name: 'Continue' })
 
 const advanceToReview = async () => {
@@ -148,5 +161,72 @@ describe('Order wizard', () => {
     await advanceToReview()
     await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
     expect(await screen.findByText(/could not be reached/i)).toBeInTheDocument()
+  })
+
+  it('applies a promo and charges the discounted total', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    createOrderMock.mockResolvedValue({ token: 'tok', paymentUrl: 'https://pay.test/1' })
+    previewPromoMock.mockResolvedValue({ code: 'SAVE25', discountCents: 500, finalCents: 1500 })
+    const assign = vi.fn()
+    Object.defineProperty(window, 'location', { configurable: true, value: { assign } })
+    renderOrder()
+    await advanceToReview()
+
+    await userEvent.type(screen.getByLabelText('Promo code'), 'save25')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(await screen.findByText('Promo code applied.')).toBeInTheDocument()
+    expect(previewPromoMock).toHaveBeenCalledWith('save25', 'lifetime')
+    expect(screen.getByText('€15.00')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pay securely' }))
+    expect(createOrderMock).toHaveBeenCalledWith(expect.objectContaining({ promoCode: 'SAVE25' }))
+  })
+
+  it('offers a free order and goes to the tracking page', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    createOrderMock.mockResolvedValue({ token: 'tok', paymentUrl: null })
+    previewPromoMock.mockResolvedValue({ code: 'FREE', discountCents: 2000, finalCents: 0 })
+    renderOrder()
+    await advanceToReview()
+
+    await userEvent.type(screen.getByLabelText('Promo code'), 'free')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(await screen.findByText('Free')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Get my free upgrade' }))
+    expect(await screen.findByText('tracking page')).toBeInTheDocument()
+  })
+
+  it('shows a checking state while validating the code', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    previewPromoMock.mockReturnValue(new Promise(() => {}))
+    renderOrder()
+    await advanceToReview()
+    await userEvent.type(screen.getByLabelText('Promo code'), 'save25')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(screen.getByRole('button', { name: 'Checking…' })).toBeDisabled()
+  })
+
+  it('shows an error for an invalid promo code', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    previewPromoMock.mockRejectedValue(new ApiError(400, 'BAD_REQUEST', 'This promo code cannot be used.', null))
+    renderOrder()
+    await advanceToReview()
+    await userEvent.type(screen.getByLabelText('Promo code'), 'nope')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(await screen.findByText('This promo code cannot be used.')).toBeInTheDocument()
+  })
+
+  it('removes an applied promo', async () => {
+    getCatalogMock.mockResolvedValue(catalog)
+    previewPromoMock.mockResolvedValue({ code: 'SAVE25', discountCents: 500, finalCents: 1500 })
+    renderOrder()
+    await advanceToReview()
+    await userEvent.type(screen.getByLabelText('Promo code'), 'save25')
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    await screen.findByText('Promo code applied.')
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(screen.getByLabelText('Promo code')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pay securely' })).toBeInTheDocument()
   })
 })

@@ -5,6 +5,7 @@ import { AppError } from '../../errors.js'
 import { createErrorHandler, notFoundHandler } from '../../middleware/error-handler.js'
 import { bodyOf } from './http.js'
 import type { Admin } from '../../services/admin/index.js'
+import type { Promos } from '../../services/promo/index.js'
 
 vi.mock('../../auth/require-user.js', () => ({
   requireUser: (req: { user?: unknown }, _res: unknown, next: () => void) => {
@@ -23,9 +24,14 @@ const keyStats = vi.fn()
 const importKeys = vi.fn()
 const admin = { listOrders, getOrder, act, keyStats, importKeys } as unknown as Admin
 
+const listPromos = vi.fn()
+const createPromo = vi.fn()
+const setActive = vi.fn()
+const promos = { list: listPromos, create: createPromo, setActive } as unknown as Promos
+
 const app = express()
 app.use(express.json())
-app.use('/api/admin', createAdminRouter(admin))
+app.use('/api/admin', createAdminRouter(admin, promos))
 app.use(notFoundHandler)
 app.use(createErrorHandler({ exposeDetails: true, logRefusals: false }))
 
@@ -107,5 +113,41 @@ describe('admin keys routes', () => {
     const response = await request(app).post('/api/admin/keys').send({ plan: 'lifetime', keys: '' })
     expect(response.status).toBe(422)
     expect(importKeys).not.toHaveBeenCalled()
+  })
+})
+
+describe('admin promos routes', () => {
+  it('lists promo codes', async () => {
+    listPromos.mockResolvedValue([{ code: 'SAVE25' }])
+    const response = await request(app).get('/api/admin/promos')
+    expect(response.status).toBe(200)
+    expect(bodyOf<{ promos: unknown[] }>(response).promos).toHaveLength(1)
+  })
+
+  it('creates a promo code', async () => {
+    createPromo.mockResolvedValue({ code: 'SAVE25' })
+    const response = await request(app).post('/api/admin/promos').send({ code: 'save25', kind: 'percent', value: 25 })
+    expect(response.status).toBe(201)
+    expect(createPromo).toHaveBeenCalledWith({ code: 'save25', kind: 'percent', value: 25 })
+  })
+
+  it('rejects a percentage above 100', async () => {
+    const response = await request(app).post('/api/admin/promos').send({ code: 'BIG', kind: 'percent', value: 150 })
+    expect(response.status).toBe(422)
+    expect(createPromo).not.toHaveBeenCalled()
+  })
+
+  it('toggles a promo code active flag', async () => {
+    setActive.mockResolvedValue({ code: 'SAVE25', active: false })
+    const id = '11111111-1111-4111-8111-111111111111'
+    const response = await request(app).post(`/api/admin/promos/${id}/active`).send({ active: false })
+    expect(response.status).toBe(200)
+    expect(setActive).toHaveBeenCalledWith(id, false)
+  })
+
+  it('rejects a non-uuid promo id', async () => {
+    const response = await request(app).post('/api/admin/promos/not-a-uuid/active').send({ active: false })
+    expect(response.status).toBe(422)
+    expect(setActive).not.toHaveBeenCalled()
   })
 })

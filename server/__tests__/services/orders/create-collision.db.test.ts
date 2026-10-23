@@ -23,6 +23,13 @@ const orders = createOrders({
     verifyNotification: () => null,
   },
   mailer: { send: () => Promise.resolve() },
+  promos: {
+    preview: () => Promise.reject(new Error('unused')),
+    redeem: () => Promise.reject(new Error('unused')),
+    list: () => Promise.reject(new Error('unused')),
+    create: () => Promise.reject(new Error('unused')),
+    setActive: () => Promise.reject(new Error('unused')),
+  },
   now: () => new Date('2026-10-18T12:00:00.000Z'),
   config: { paymentWindowMinutes: 30, publicUrl: 'https://boost.test' },
 })

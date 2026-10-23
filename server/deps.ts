@@ -6,6 +6,7 @@ import { createNowPayments } from './services/payments/nowpayments.js'
 import { createMailer } from './services/mail.js'
 import { createOrders } from './services/orders/index.js'
 import { createAdmin } from './services/admin/index.js'
+import { createPromos } from './services/promo/index.js'
 
 const PAYMENT_WINDOW_MINUTES = 30
 
@@ -37,12 +38,15 @@ export const payments = createNowPayments({
   ipnSecret: required('NOWPAYMENTS_IPN_SECRET', env.NOWPAYMENTS_IPN_SECRET),
 })
 
+export const promos = createPromos({ now: () => new Date() })
+
 export const orders = createOrders({
   secretBox,
   orderLink,
   upgrader,
   payments,
   mailer,
+  promos,
   now: () => new Date(),
   config: { paymentWindowMinutes: PAYMENT_WINDOW_MINUTES, publicUrl: env.WEB_ORIGIN },
 })

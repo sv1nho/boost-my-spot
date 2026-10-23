@@ -2,8 +2,12 @@ import { Router } from 'express'
 import type { Request, RequestHandler, Response } from 'express'
 import { requireUser } from '../auth/require-user.js'
 import { parse } from './validate.js'
-import { adminActionSchema, adminOrdersQuerySchema, importKeysSchema, referenceParamSchema } from './schemas.js'
+import {
+  adminActionSchema, adminOrdersQuerySchema, createPromoSchema, importKeysSchema,
+  promoActiveSchema, promoIdParamSchema, referenceParamSchema,
+} from './schemas.js'
 import type { Admin } from '../services/admin/index.js'
+import type { Promos } from '../services/promo/index.js'
 
 const handle =
   (run: (req: Request, res: Response) => Promise<void>): RequestHandler =>
@@ -13,7 +17,7 @@ const handle =
 
 const referenceOf = (req: Request): string => parse(referenceParamSchema, req.params, 'params').reference
 
-export const createAdminRouter = (admin: Admin): Router => {
+export const createAdminRouter = (admin: Admin, promos: Promos): Router => {
   const router = Router()
 
   router.use(requireUser)
@@ -53,6 +57,29 @@ export const createAdminRouter = (admin: Admin): Router => {
     handle(async (req, res) => {
       const body = parse(importKeysSchema, req.body, 'body')
       res.status(201).json(await admin.importKeys({ plan: body.plan, raw: body.keys }))
+    })
+  )
+
+  router.get(
+    '/promos',
+    handle(async (_req, res) => {
+      res.json({ promos: await promos.list() })
+    })
+  )
+
+  router.post(
+    '/promos',
+    handle(async (req, res) => {
+      res.status(201).json(await promos.create(parse(createPromoSchema, req.body, 'body')))
+    })
+  )
+
+  router.post(
+    '/promos/:id/active',
+    handle(async (req, res) => {
+      const { id } = parse(promoIdParamSchema, req.params, 'params')
+      const { active } = parse(promoActiveSchema, req.body, 'body')
+      res.json(await promos.setActive(id, active))
     })
   )
 

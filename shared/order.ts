@@ -21,6 +21,7 @@ export type CreateOrderInput = {
   email: string
   spDc: string
   locale: string
+  promoCode?: string
 }
 
 type CatalogPlan = {
@@ -35,4 +36,4 @@ export type Catalog = {
   countries: string[]
 }
 
-export type CreatedOrder = { token: string; paymentUrl: string }
+export type CreatedOrder = { token: string; paymentUrl: string | null }

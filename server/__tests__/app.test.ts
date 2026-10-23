@@ -12,6 +12,9 @@ vi.mock('../deps.js', () => ({
   admin: {
     listOrders: vi.fn(), getOrder: vi.fn(), act: vi.fn(), keyStats: vi.fn(), importKeys: vi.fn(),
   },
+  promos: {
+    preview: vi.fn(), redeem: vi.fn(), list: vi.fn(), create: vi.fn(), setActive: vi.fn(),
+  },
 }))
 
 import { orders, payments } from '../deps.js'

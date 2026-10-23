@@ -4,7 +4,8 @@ import {
 } from '../../api/client.js'
 import { getCatalog } from '../../api/catalog.js'
 import { createOrder, getOrder, lookupOrder, submitSpotify } from '../../api/orders.js'
-import { getAdminOrder, getKeyStats, importKeys, listAdminOrders, runAdminAction } from '../../api/admin.js'
+import { createPromo, getAdminOrder, getKeyStats, importKeys, listAdminOrders, listPromos, runAdminAction, setPromoActive } from '../../api/admin.js'
+import { previewPromo } from '../../api/promo.js'
 
 const jsonResponse = (body: unknown, status = 200): Response =>
   ({
@@ -126,5 +127,20 @@ describe('endpoint helpers', () => {
     expect((calls[3][1] as RequestInit).body).toBe('{"action":"retry"}')
     expect(calls[4][0]).toBe('/api/admin/keys')
     expect((calls[5][1] as RequestInit).body).toBe('{"plan":"lifetime","keys":"K1"}')
+  })
+
+  it('calls the promo urls and methods', async () => {
+    const fetchMock = spyFetch().mockResolvedValue(jsonResponse({ promos: [] }))
+    await previewPromo('save25', 'lifetime')
+    await listPromos()
+    await createPromo({ code: 'X', kind: 'percent', value: 25 })
+    await setPromoActive('p1', false)
+    const calls = fetchMock.mock.calls
+    expect(calls[0][0]).toBe('/api/promo')
+    expect((calls[0][1] as RequestInit).body).toBe('{"code":"save25","plan":"lifetime"}')
+    expect(calls[1][0]).toBe('/api/admin/promos')
+    expect(calls[2][0]).toBe('/api/admin/promos')
+    expect((calls[2][1] as RequestInit).method).toBe('POST')
+    expect(calls[3][0]).toBe('/api/admin/promos/p1/active')
   })
 })

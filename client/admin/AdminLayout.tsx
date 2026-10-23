@@ -20,6 +20,7 @@ export function AdminLayout () {
         <nav className='admin-tabs'>
           <NavLink end to='/admin' className={linkClass}>{t('Orders')}</NavLink>
           <NavLink to='/admin/keys' className={linkClass}>{t('Keys')}</NavLink>
+          <NavLink to='/admin/promos' className={linkClass}>{t('Promos')}</NavLink>
         </nav>
         <div className='admin-session'>
           {session !== null && <span className='admin-user'>{session.user.email}</span>}

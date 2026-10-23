@@ -1,5 +1,6 @@
 import type { OrderStatus } from './order-status.js'
 import type { PlanId } from './plans.js'
+import type { PromoKind } from './promo.js'
 
 export type OrderEventView = {
   id: string
@@ -49,4 +50,24 @@ export type KeyStat = {
 export type ImportKeysResult = {
   imported: number
   skipped: number
+}
+
+export type PromoSummary = {
+  id: string
+  code: string
+  kind: PromoKind
+  value: number
+  active: boolean
+  expiresAt: string | null
+  maxRedemptions: number | null
+  redemptions: number
+  createdAt: string
+}
+
+export type CreatePromoInput = {
+  code: string
+  kind: PromoKind
+  value: number
+  expiresAt?: string | null
+  maxRedemptions?: number | null
 }

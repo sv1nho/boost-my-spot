@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { Field, fieldMarks } from '../components/Field.js'
 import { PendingNote } from '../components/PendingNote.js'
 import { SpotifyKeyField } from '../orders/SpotifyKeyField.js'
 import { SpotifyKeyGuide } from '../orders/SpotifyKeyGuide.js'
 import { getCatalog } from '../api/catalog.js'
 import { createOrder } from '../api/orders.js'
+import { previewPromo } from '../api/promo.js'
 import { errorMessage, isAbort, refusalMessage } from '../api/client.js'
 import { useLocale, useT } from '../i18n/context.js'
 import type { Catalog } from '../../shared/order.js'
+import type { PromoPreview } from '../../shared/promo.js'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -23,6 +26,7 @@ const LAST_STEP = STEP_LABELS.length - 1
 export function Order () {
   const t = useT()
   const { locale } = useLocale()
+  const navigate = useNavigate()
 
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -34,6 +38,11 @@ export function Order () {
   const [guideOpen, setGuideOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  const [promoInput, setPromoInput] = useState('')
+  const [applied, setApplied] = useState<PromoPreview | null>(null)
+  const [promoError, setPromoError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -80,13 +89,32 @@ export function Order () {
 
   const back = (): void => { setAttempted(false); setActionError(null); setStep((current) => current - 1) }
 
+  const applyPromo = (): void => {
+    setChecking(true)
+    setPromoError(null)
+    previewPromo(promoInput.trim(), plan.id)
+      .then((preview) => { setApplied(preview); setChecking(false) })
+      .catch((cause: unknown) => { setApplied(null); setPromoError(refusalMessage(cause)); setChecking(false) })
+  }
+
+  const removePromo = (): void => { setApplied(null); setPromoInput(''); setPromoError(null) }
+
   const submit = (): void => {
     setSubmitting(true)
     setActionError(null)
-    createOrder({ plan: plan.id, country: draft.country, email: draft.email, spDc: draft.spDc, locale })
-      .then((created) => { window.location.assign(created.paymentUrl) })
+    createOrder({
+      plan: plan.id, country: draft.country, email: draft.email, spDc: draft.spDc, locale,
+      ...(applied === null ? {} : { promoCode: applied.code }),
+    })
+      .then((created) => {
+        if (created.paymentUrl === null) void navigate(`/orders/${created.token}`)
+        else window.location.assign(created.paymentUrl)
+      })
       .catch((cause: unknown) => { setActionError(refusalMessage(cause)); setSubmitting(false) })
   }
+
+  const free = applied !== null && applied.finalCents === 0
+  const total = applied === null ? plan.priceCents : applied.finalCents
 
   const countryLabel = (code: string): string => (code === 'ANY' ? t('Any available country') : code)
 
@@ -160,11 +188,42 @@ export function Order () {
           <h4 className='card-subtitle'>{t('Review your order')}</h4>
           <dl className='summary'>
             <div className='summary-row'><dt>{t('Offer')}</dt><dd>{t(plan.label)} — {money(plan.priceCents)}</dd></div>
+            {applied !== null && (
+              <div className='summary-row'><dt>{t('Promo code')} · {applied.code}</dt><dd>−{money(plan.priceCents - applied.finalCents)}</dd></div>
+            )}
             <div className='summary-row'><dt>{t('Country')}</dt><dd>{countryLabel(draft.country)}</dd></div>
             <div className='summary-row'><dt>{t('Email')}</dt><dd>{draft.email}</dd></div>
-            <div className='summary-row'><dt>{t('Spotify session key')}</dt><dd>{t('Provided')}</dd></div>
+            <div className='summary-row summary-total'><dt>{t('Total')}</dt><dd>{free ? t('Free') : money(total)}</dd></div>
           </dl>
-          <p className='card-text'>{t('You will be sent to a secure payment page to finish.')}</p>
+
+          {applied === null
+            ? (
+              <div className='space-y-2'>
+                <div className='promo-field'>
+                  <input
+                    className='form-input'
+                    aria-label={t('Promo code')}
+                    placeholder={t('Promo code')}
+                    value={promoInput}
+                    onChange={(event) => { setPromoInput(event.target.value) }}
+                  />
+                  <button type='button' className='btn btn-ghost' disabled={checking || promoInput.trim().length === 0} onClick={applyPromo}>
+                    {checking ? t('Checking…') : t('Apply')}
+                  </button>
+                </div>
+                {promoError !== null && <p className='field-error'>{promoError}</p>}
+              </div>
+              )
+            : (
+              <p className='promo-applied'>
+                {t('Promo code applied.')}{' '}
+                <button type='button' className='link-button' onClick={removePromo}>{t('Remove')}</button>
+              </p>
+              )}
+
+          <p className='card-text'>
+            {free ? t('No payment needed — we start your upgrade right away.') : t('You will be sent to a secure payment page to finish.')}
+          </p>
         </section>
       )}
 
@@ -176,7 +235,7 @@ export function Order () {
           ? <button type='button' className='btn btn-primary' onClick={next}>{t('Continue')}</button>
           : (
             <button type='button' className='btn btn-primary' disabled={submitting} onClick={submit}>
-              {submitting ? t('Starting…') : t('Pay securely')}
+              {submitting ? t('Starting…') : free ? t('Get my free upgrade') : t('Pay securely')}
             </button>
             )}
       </div>
