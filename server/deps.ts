@@ -42,6 +42,7 @@ export const orders = createOrders({
   orderLink,
   upgrader,
   payments,
+  mailer,
   now: () => new Date(),
   config: { paymentWindowMinutes: PAYMENT_WINDOW_MINUTES, publicUrl: env.WEB_ORIGIN },
 })

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest'
 import { randomBytes } from 'node:crypto'
 import { prisma } from '../../../prisma.js'
 import { createOrders } from '../../../services/orders/index.js'
@@ -20,6 +20,8 @@ const payments = {
   verifyNotification: () => null,
 }
 
+const send = vi.fn<(mail: { subject: string; to: string }) => Promise<void>>()
+
 const build = (stock: Record<string, number>) =>
   createOrders({
     secretBox,
@@ -31,9 +33,12 @@ const build = (stock: Record<string, number>) =>
       renew: () => Promise.reject(new Error('unused')),
     },
     payments,
+    mailer: { send: (mail) => send(mail) },
     now: () => NOW,
     config: { paymentWindowMinutes: 30, publicUrl: 'https://boost.test' },
   })
+
+beforeEach(() => { vi.clearAllMocks(); send.mockResolvedValue(undefined) })
 
 const input = (overrides: Partial<CreateOrderInput> = {}): CreateOrderInput => ({
   plan: 'lifetime',
@@ -85,6 +90,17 @@ describe('orders service', () => {
       successUrl: `https://boost.test/orders/${result.token}?paid=1`,
       callbackUrl: 'https://boost.test/api/payments/nowpayments',
     })
+
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(send.mock.calls[0][0].to).toBe('buyer@example.com')
+    expect(send.mock.calls[0][0].subject).toMatch(/received/i)
+  })
+
+  it('still creates the order when the confirmation email fails', async () => {
+    send.mockRejectedValue(new Error('smtp down'))
+    const orders = build({ US: 5 })
+    await expect(orders.create(input())).resolves.toMatchObject({ paymentUrl: 'https://pay.test/i/1' })
+    expect(await prisma.order.count()).toBe(1)
   })
 
   it('refuses to sell a country with no stock', async () => {

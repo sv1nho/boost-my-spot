@@ -22,9 +22,12 @@ test('a guest orders an upgrade and watches it go active', async ({ page, reques
 
   await expect(page.locator('.status-pill')).toHaveText('Premium active', { timeout: 30_000 })
 
-  await expect.poll(async () => {
+  const subjects = async (): Promise<string> => {
     const sent = await request.get(`${FAKE}/resend/sent?to=${encodeURIComponent(email)}`)
     const body = await sent.json() as { emails: { subject: string }[] }
     return body.emails.map((one) => one.subject).join(' ')
-  }, { timeout: 30_000 }).toMatch(/active/i)
+  }
+
+  await expect.poll(subjects, { timeout: 30_000 }).toMatch(/active/i)
+  expect(await subjects()).toMatch(/received/i)
 })

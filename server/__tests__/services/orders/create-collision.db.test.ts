@@ -22,6 +22,7 @@ const orders = createOrders({
     createInvoice: (input) => Promise.resolve({ id: `inv_${input.reference}`, url: 'https://pay' }),
     verifyNotification: () => null,
   },
+  mailer: { send: () => Promise.resolve() },
   now: () => new Date('2026-10-18T12:00:00.000Z'),
   config: { paymentWindowMinutes: 30, publicUrl: 'https://boost.test' },
 })

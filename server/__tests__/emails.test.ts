@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { needsActionEmail, orderActiveEmail, orderFailedEmail } from '../../worker/emails.js'
+import { needsActionEmail, orderActiveEmail, orderFailedEmail, orderReceivedEmail } from '../emails.js'
 
 const ctx = (locale: string) => ({
   email: 'buyer@example.com',
@@ -9,6 +9,15 @@ const ctx = (locale: string) => ({
 })
 
 describe('order emails', () => {
+  it('builds the order-received email in both languages', () => {
+    const en = orderReceivedEmail(ctx('en'))
+    expect(en.to).toBe('buyer@example.com')
+    expect(en.subject).toMatch(/received/i)
+    expect(en.subject).toContain('BMS-0000ABCD')
+    expect(en.html).toContain('https://boost.test/orders/tok')
+    expect(orderReceivedEmail(ctx('fr')).subject).toMatch(/reçue/i)
+  })
+
   it('builds the active email in both languages', () => {
     const en = orderActiveEmail(ctx('en'))
     expect(en.to).toBe('buyer@example.com')

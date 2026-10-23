@@ -1,5 +1,7 @@
 import { prisma } from '../../prisma.js'
 import { AppError } from '../../errors.js'
+import { log } from '../../log.js'
+import { orderReceivedEmail } from '../../emails.js'
 import { PLANS, PLAN_CURRENCY } from '../../../shared/plans.js'
 import { generateReference } from './reference.js'
 import { toCatalog, toOrderView } from './mapper.js'
@@ -8,6 +10,7 @@ import type { Catalog, CreateOrderInput, CreatedOrder, OrderView } from '../../.
 import type { SecretBox } from '../secret-box.js'
 import type { OrderLink } from '../order-link.js'
 import type { Upgrader } from '../upgrader.js'
+import type { Mailer } from '../mail.js'
 import type { PaymentNotification, PaymentProvider } from '../payments/provider.js'
 
 type Deps = {
@@ -15,6 +18,7 @@ type Deps = {
   orderLink: OrderLink
   upgrader: Upgrader
   payments: PaymentProvider
+  mailer: Mailer
   now: () => Date
   config: { paymentWindowMinutes: number; publicUrl: string }
 }
@@ -39,9 +43,17 @@ const availableCountries = (stock: Record<string, number>): string[] =>
     .filter(([, count]) => count > 0)
     .map(([code]) => code)
 
-export function createOrders ({ secretBox, orderLink, upgrader, payments, now, config }: Deps): Orders {
+export function createOrders ({ secretBox, orderLink, upgrader, payments, mailer, now, config }: Deps): Orders {
   const hasStock = (stock: Record<string, number>, country: string): boolean =>
     country === 'ANY' ? Object.values(stock).some((count) => count > 0) : (stock[country] ?? 0) > 0
+
+  const sendReceipt = async (email: string, reference: string, token: string, locale: string): Promise<void> => {
+    try {
+      await mailer.send(orderReceivedEmail({ email, reference, trackingLink: `${config.publicUrl}/orders/${token}`, locale }))
+    } catch (cause) {
+      log('warn', 'could not send the order email', { reference, cause: String(cause) })
+    }
+  }
 
   const notFound = (): never => {
     throw new AppError('NOT_FOUND', 'This order could not be found.')
@@ -100,6 +112,8 @@ export function createOrders ({ secretBox, orderLink, upgrader, payments, now, c
       where: { id: order.id },
       data: { paymentProvider: 'nowpayments', paymentId: invoice.id },
     })
+
+    await sendReceipt(order.email, order.reference, token, order.locale)
 
     return { token, paymentUrl: invoice.url }
   }

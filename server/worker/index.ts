@@ -1,7 +1,7 @@
 import { prisma } from '../prisma.js'
 import { log } from '../log.js'
 import { advanceOrder } from '../services/orders/transition.js'
-import { needsActionEmail, orderActiveEmail, orderFailedEmail } from './emails.js'
+import { needsActionEmail, orderActiveEmail, orderFailedEmail } from '../emails.js'
 import type { Mail, Mailer } from '../services/mail.js'
 import type { SecretBox } from '../services/secret-box.js'
 import type { OrderLink } from '../services/order-link.js'

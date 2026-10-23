@@ -1,4 +1,4 @@
-import type { Mail } from '../services/mail.js'
+import type { Mail } from './services/mail.js'
 
 type EmailContext = {
   email: string
@@ -14,6 +14,21 @@ const shell = (heading: string, body: string, cta: string, link: string): string
   `<p style="color:#888;font-size:12px">boost-my-spot — not affiliated with Spotify AB.</p></div>`
 
 const isFr = (locale: string): boolean => locale === 'fr'
+
+export const orderReceivedEmail = (c: EmailContext): Mail =>
+  isFr(c.locale)
+    ? {
+        to: c.email,
+        subject: `Commande reçue — ${c.reference}`,
+        html: shell('Commande reçue', `Merci ! Nous avons bien reçu la commande ${c.reference}. Dès que votre paiement crypto est confirmé, nous lançons l’upgrade — suivez-la ici.`, 'Suivre ma commande', c.trackingLink),
+        text: `Commande ${c.reference} reçue. Suivez-la : ${c.trackingLink}`,
+      }
+    : {
+        to: c.email,
+        subject: `Order received — ${c.reference}`,
+        html: shell('Order received', `Thanks! We received order ${c.reference}. As soon as your crypto payment is confirmed we start the upgrade — follow it here.`, 'Track my order', c.trackingLink),
+        text: `Order ${c.reference} received. Track it: ${c.trackingLink}`,
+      }
 
 export const orderActiveEmail = (c: EmailContext): Mail =>
   isFr(c.locale)
