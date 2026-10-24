@@ -55,8 +55,8 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "7.10.0",
-    "@prisma/client": "7.10.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "better-auth": "1.7.3",
     "compression": "1.8.2",
     "express": "5.2.1",
@@ -93,7 +93,7 @@
     "happy-dom": "21.0.4",
     "knip": "6.39.0",
     "pg": "8.23.0",
-    "prisma": "7.10.0",
+    "prisma": "7.10.1",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-router": "8.3.0",
@@ -106,13 +106,9 @@
     "vite": "8.1.6",
     "vitest": "4.1.12"
   },
-  "overrides": {
-    "deepmerge-ts": "8.0.2",
-    "mysql2": "3.24.4"
-  },
   "allowScripts": {
-    "@prisma/engines@7.10.0": true,
+    "@prisma/engines@7.10.1": true,
     "esbuild@0.28.2": true,
-    "prisma@7.10.0": true
+    "prisma@7.10.1": true
   }
 }
