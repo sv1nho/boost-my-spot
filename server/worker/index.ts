@@ -64,12 +64,22 @@ export function createWorker ({ upgrader, mailer, secretBox, orderLink, now, pub
     await prisma.upgradeKey.updateMany({ where: { orderId }, data: { orderId: null } })
   }
 
-  const claimKey = async (orderId: string, plan: string): Promise<string | null> => {
-    const key = await prisma.upgradeKey.findFirst({ where: { orderId: null, plan }, select: { id: true, keySealed: true } })
+  const claimKey = async (orderId: string, plan: string, skip: string[] = []): Promise<string | null> => {
+    const key = await prisma.upgradeKey.findFirst({
+      where: { orderId: null, plan, ...(skip.length === 0 ? {} : { id: { notIn: skip } }) },
+      select: { id: true, keySealed: true },
+    })
     if (key === null) return null
+    let value: string
+    try {
+      value = secretBox.open(Buffer.from(key.keySealed))
+    } catch (cause) {
+      log('error', 'an upgrade key could not be decrypted and was skipped', { keyId: key.id, cause: String(cause) })
+      return claimKey(orderId, plan, [...skip, key.id])
+    }
     const claimed = await prisma.upgradeKey.updateMany({ where: { id: key.id, orderId: null }, data: { orderId } })
-    if (claimed.count === 0) return claimKey(orderId, plan)
-    return secretBox.open(Buffer.from(key.keySealed))
+    if (claimed.count === 0) return claimKey(orderId, plan, skip)
+    return value
   }
 
   const reschedule = async (order: OrderJob, message: string, delaySeconds: number): Promise<void> => {

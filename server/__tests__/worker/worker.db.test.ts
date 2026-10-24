@@ -44,6 +44,9 @@ const makeOrder = (overrides: Record<string, unknown>) =>
 const makeKey = (orderId: string | null) =>
   prisma.upgradeKey.create({ data: { keyHash: `k${String(++seq).padStart(63, '0')}`, keySealed: sealed('KEY-VALUE'), orderId } })
 
+const makeCorruptKey = () =>
+  prisma.upgradeKey.create({ data: { keyHash: `k${String(++seq).padStart(63, '0')}`, keySealed: new Uint8Array([1, 2, 3]), orderId: null } })
+
 beforeEach(() => {
   clock = new Date('2026-10-12T12:00:00.000Z')
   vi.clearAllMocks()
@@ -234,6 +237,34 @@ describe('worker', () => {
     const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
     expect(after.status).toBe('renewing')
     expect(after.attempts).toBe(1)
+  })
+
+  it('skips an undecryptable key and upgrades with a sound one', async () => {
+    upgrade.mockResolvedValue({ ok: true, account: 'u@spotify.test' })
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    const corrupt = await makeCorruptKey()
+    await makeKey(null)
+
+    await worker.runOnce()
+
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('active')
+    expect(upgrade).toHaveBeenCalledWith({ key: 'KEY-VALUE', spDc: 'COOKIE', country: 'US' })
+    expect((await prisma.upgradeKey.findUniqueOrThrow({ where: { id: corrupt.id } })).orderId).toBeNull()
+  })
+
+  it('backs a paid order off when every key is undecryptable, claiming none', async () => {
+    const order = await makeOrder({ status: 'paid', spDcSealed: sealed('COOKIE') })
+    await makeCorruptKey()
+    await makeCorruptKey()
+
+    await worker.runOnce()
+
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
+    expect(after.status).toBe('paid')
+    expect(after.attempts).toBe(1)
+    expect(upgrade).not.toHaveBeenCalled()
+    expect(await prisma.upgradeKey.count({ where: { orderId: null } })).toBe(2)
   })
 
   it('gives up after the last attempt and marks the order failed', async () => {
